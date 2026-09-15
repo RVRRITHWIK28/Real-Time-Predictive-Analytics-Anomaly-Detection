@@ -1,0 +1,10 @@
+numpy
+pandas
+scikit-learn
+pymongo
+kafka-python
+fastapi
+uvicorn
+streamlit
+python-dotenv
+pydantic
