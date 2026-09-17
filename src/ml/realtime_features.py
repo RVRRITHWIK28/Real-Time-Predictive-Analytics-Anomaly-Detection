@@ -18,24 +18,79 @@ class RealtimeFeatureBuilder:
 
         self.data = pd.read_csv(self.data_path)
 
-        self.data["date"] = pd.to_datetime(self.data["date"])
+        self.data["date"] = pd.to_datetime(
+            self.data["date"]
+        )
 
-    def build_features(self, product_id, store_id, prediction_date):
+    def build_features(
+        self,
+        product_id,
+        store_id,
+        prediction_date,
+        live_demand=None
+    ):
         """
-        Build the ML features required for a real-time demand prediction.
+        Build ML features for a real-time demand prediction.
+
+        Historical demand comes from the processed dataset.
+        Optional live_demand can be added as the latest
+        completed daily demand.
         """
 
-        prediction_date = pd.to_datetime(prediction_date)
+        prediction_date = pd.to_datetime(
+            prediction_date
+        )
 
-        # Filter to the requested product and store
+        # Historical data before prediction date
         history = self.data[
             (self.data["product_id"] == product_id)
             & (self.data["store_id"] == store_id)
             & (self.data["date"] < prediction_date)
         ].copy()
 
-        # Sort chronologically
         history = history.sort_values("date")
+
+        # Add the latest completed live day if supplied
+        if live_demand is not None:
+
+            live_date = prediction_date - pd.Timedelta(
+                days=1
+            )
+
+            live_record = {
+                "date": live_date,
+                "product_id": product_id,
+                "store_id": store_id,
+                "category": (
+                    history.iloc[-1]["category"]
+                    if len(history) > 0
+                    else None
+                ),
+                "region": (
+                    history.iloc[-1]["region"]
+                    if len(history) > 0
+                    else None
+                ),
+                "demand": float(live_demand),
+                "revenue": 0.0,
+            }
+
+            history = pd.concat(
+                [
+                    history,
+                    pd.DataFrame([live_record])
+                ],
+                ignore_index=True
+            )
+
+            history = (
+                history
+                .drop_duplicates(
+                    subset=["date"],
+                    keep="last"
+                )
+                .sort_values("date")
+            )
 
         if len(history) < 7:
             raise ValueError(
@@ -50,7 +105,9 @@ class RealtimeFeatureBuilder:
         lag_7 = history.iloc[-7]["demand"]
 
         # Previous 7-day average
-        rolling_mean_7 = history.iloc[-7:]["demand"].mean()
+        rolling_mean_7 = (
+            history.iloc[-7:]["demand"].mean()
+        )
 
         # Calendar features
         day_of_week = prediction_date.dayofweek
@@ -73,7 +130,9 @@ class RealtimeFeatureBuilder:
             "lag_1": float(lag_1),
             "lag_2": float(lag_2),
             "lag_7": float(lag_7),
-            "rolling_mean_7": float(rolling_mean_7),
+            "rolling_mean_7": float(
+                rolling_mean_7
+            ),
         }
 
         return features
@@ -99,5 +158,7 @@ if __name__ == "__main__":
         print(f"{key:20} : {value}")
 
     print("=" * 60)
-    print("REAL-TIME FEATURE BUILDER TEST COMPLETE")
+    print(
+        "REAL-TIME FEATURE BUILDER TEST COMPLETE"
+    )
     print("=" * 60)

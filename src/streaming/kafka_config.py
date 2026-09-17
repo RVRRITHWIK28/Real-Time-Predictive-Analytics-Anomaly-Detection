@@ -1,5 +1,5 @@
-KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
-
-TRANSACTION_TOPIC = "transactions"
-
-CONSUMER_GROUP = "analytics-group"
+from src.config.settings import (
+    KAFKA_BOOTSTRAP_SERVERS,
+    TRANSACTION_TOPIC,
+    CONSUMER_GROUP,
+)

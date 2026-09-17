@@ -8,7 +8,7 @@ class RealtimeDemandPredictor:
         self.feature_builder = RealtimeFeatureBuilder()
         self.prediction_service = DemandPredictionService()
 
-    def predict(self, product_id, store_id, prediction_date):
+    def predict(self, product_id, store_id, prediction_date,live_demand=None):
         """
         Build real-time features and generate demand prediction.
         """
@@ -17,7 +17,7 @@ class RealtimeDemandPredictor:
         features = self.feature_builder.build_features(
             product_id=product_id,
             store_id=store_id,
-            prediction_date=prediction_date
+            prediction_date=prediction_date,live_demand=live_demand
         )
 
         # Step 2: Generate prediction
