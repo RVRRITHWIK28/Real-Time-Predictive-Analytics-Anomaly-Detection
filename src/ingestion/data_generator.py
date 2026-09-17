@@ -1,6 +1,7 @@
 import random
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 
 from src.ingestion.master_data import PRODUCTS, STORES, CUSTOMERS
 from src.ingestion.schemas import TransactionEvent
@@ -28,58 +29,29 @@ def choose_product():
 
 
 def choose_store():
-    return random.choice(STORES)
+    weights = [
+        {
+            "S001": 1.15,
+            "S002": 1.20,
+            "S003": 1.05,
+            "S004": 1.25,
+            "S005": 1.20,
+            "S006": 1.00,
+            "S007": 0.95,
+            "S008": 0.90,
+        }[store["store_id"]]
+        for store in STORES
+    ]
+
+    return random.choices(
+        STORES,
+        weights=weights,
+        k=1,
+    )[0]
 
 
 def choose_customer():
     return random.choice(CUSTOMERS)
-
-
-def generate_transaction():
-    product = choose_product()
-    store = choose_store()
-    customer = choose_customer()
-
-    quantity = random.randint(1, 5)
-
-    price_variation = random.uniform(0.95, 1.05)
-    unit_price = round(
-        product["base_price"] * price_variation,
-        2,
-    )
-
-    discount = round(
-        random.uniform(0.00, 0.20),
-        2,
-    )
-
-    revenue = round(
-        quantity * unit_price * (1 - discount),
-        2,
-    )
-
-    event = TransactionEvent(
-        event_id=f"evt_{uuid.uuid4().hex[:12]}",
-        timestamp=datetime.now(timezone.utc),
-
-        customer_id=customer,
-        product_id=product["product_id"],
-        category=product["category"],
-
-        store_id=store["store_id"],
-        region=store["region"],
-
-        quantity=quantity,
-        unit_price=unit_price,
-        discount=discount,
-
-        payment_method=random.choice(PAYMENT_METHODS),
-        channel=random.choice(CHANNELS),
-
-        revenue=revenue,
-    )
-
-    return event
 
 def get_time_demand_multiplier(hour: int) -> float:
     """
@@ -108,3 +80,69 @@ def get_time_demand_multiplier(hour: int) -> float:
         return 0.70
 
     return 1.0
+
+def get_day_demand_multiplier(event_time) -> float:
+    """
+    Return a demand multiplier based on the day of week.
+    """
+
+    weekday = event_time.weekday()
+
+    # Saturday and Sunday
+    if weekday >= 5:
+        return 1.20
+
+    return 1.0
+
+
+def generate_transaction(event_time=None):
+    product = choose_product()
+    store = choose_store()
+    customer = choose_customer()
+
+    quantity = random.randint(1, 5)
+
+    price_variation = random.uniform(0.95, 1.05)
+    unit_price = round(
+        product["base_price"] * price_variation,
+        2,
+    )
+
+    discount = round(
+        random.uniform(0.00, 0.20),
+        2,
+    )
+
+    revenue = float(
+    (
+        Decimal(str(quantity))
+        * Decimal(str(unit_price))
+        * (Decimal("1") - Decimal(str(discount)))
+    ).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
+)
+
+    event = TransactionEvent(
+        event_id=f"evt_{uuid.uuid4().hex[:12]}",
+        timestamp=event_time or datetime.now(timezone.utc),
+
+        customer_id=customer,
+        product_id=product["product_id"],
+        category=product["category"],
+
+        store_id=store["store_id"],
+        region=store["region"],
+
+        quantity=quantity,
+        unit_price=unit_price,
+        discount=discount,
+
+        payment_method=random.choice(PAYMENT_METHODS),
+        channel=random.choice(CHANNELS),
+
+        revenue=revenue,
+    )
+
+    return event
