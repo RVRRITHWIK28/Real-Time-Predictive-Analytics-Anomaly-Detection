@@ -8,3 +8,4 @@ uvicorn
 streamlit
 python-dotenv
 pydantic
+streamlit-autorefresh
