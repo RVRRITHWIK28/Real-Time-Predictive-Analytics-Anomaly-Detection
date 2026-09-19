@@ -72,9 +72,10 @@ flowchart LR
     L --> M[Streamlit Dashboard]
     M --> N[Business Users]
 ```
+---
 ## 🔄 End-to-End Data FlowPlaintext
 
-``
+```
                  ┌───────────────────────┐
                  │   Transaction Source  │
                  └───────────┬───────────┘
@@ -122,7 +123,8 @@ flowchart LR
                   │    Streamlit    │
                   │    Dashboard    │
                   └─────────────────┘
-``
+```
+---
 
 ## ⚙️ Core Components
 
@@ -634,6 +636,7 @@ Security Groups
 Current Live Endpoint
 http://52.7.190.86:8501
 
+---
 
 ## 🔐 Security & Configuration
 
@@ -888,10 +891,12 @@ Python Virtual Environment
 
 
 ## 🚀 Running the Project Locally
+---
 1. Clone the repository
 git clone https://github.com/RVRRITHWIK28/realtime-predictive-analytics.git
 
 cd realtime-predictive-analytics
+---
 2. Create a virtual environment
 Windows
 python -m venv venv
@@ -901,8 +906,10 @@ Linux / macOS
 python3 -m venv venv
 
 source venv/bin/activate
+---
 3. Install dependencies
 pip install -r requirements.txt
+---
 4. Configure environment variables
 
 Create a .env file:
@@ -922,6 +929,8 @@ TRANSACTIONS_COLLECTION=transactions
 ANOMALIES_COLLECTION=anomalies
 PREDICTIONS_COLLECTION=predictions
 
+---
+
 ## 🐳 Running with Docker Compose
 
 Start the complete infrastructure:
@@ -939,7 +948,7 @@ docker compose logs -f
 Stop the stack:
 
 docker compose down
-
+---
 
 ## 🌐 Accessing the Application
 Streamlit Dashboard
@@ -1002,7 +1011,7 @@ FastAPI
             ▼
 Streamlit Dashboard
 ```
-
+---
 ## 💡 Key Engineering Concepts Demonstrated
 
 This project demonstrates practical implementation of:
@@ -1031,7 +1040,7 @@ Health checks
 Logging
 End-to-end system integration
 
-
+---
 ## 🔍 Production-Oriented Design
 
 The project incorporates several production-oriented practices:
@@ -1063,7 +1072,7 @@ Application activity is written to application logs and console output.
 Containerization
 
 The application and supporting infrastructure are deployed as independent Docker services.
-
+---
 ## 📌 Future Improvements
 
 Potential future improvements include:
@@ -1082,7 +1091,7 @@ Centralized observability
 Infrastructure as Code
 
 These are future enhancements and are not currently required for the core system.
-
+---
 ## 👨‍💻 Author
 
 Rithwik Ramadugu
@@ -1110,7 +1119,7 @@ Cloud Computing
 ✔ Dockerized Microservice Architecture
 ✔ AWS EC2 Deployment
 ✔ Public Live Dashboard
-
+---
 ## 🔗 Project Links
 
 🌐 Live Demo
