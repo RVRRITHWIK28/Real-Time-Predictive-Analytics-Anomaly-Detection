@@ -434,11 +434,13 @@ RMSE : 9.89
 MAPE : 57.95%
 
 The model is persisted using:
+
 ```
 models/
 ├── demand_model.joblib
 └── demand_model_metadata.json
 ```
+
 The reported metrics are based on the project's current synthetic dataset and evaluation split.
 
 ## 🔮 Real-Time ML Prediction
@@ -740,6 +742,8 @@ FastAPI
 Streamlit
 ```
 
+---
+
 ## 📈 Current System Scale
 
 The current synthetic environment includes:
@@ -754,6 +758,8 @@ Kafka topic	transactions
 MongoDB collections	3
 ML model	Random Forest
 Dashboard refresh	~5 seconds
+
+---
 
 ## 🗂️ Project Structure
 ```
@@ -858,6 +864,7 @@ realtime-predictive-analytics/
 
 
 ## 🛠️ Technology Stack
+
 Data Engineering
 Python
 Apache Kafka
@@ -892,11 +899,14 @@ Python Virtual Environment
 
 ## 🚀 Running the Project Locally
 ---
+
 1. Clone the repository
 git clone https://github.com/RVRRITHWIK28/realtime-predictive-analytics.git
 
 cd realtime-predictive-analytics
+
 ---
+
 2. Create a virtual environment
 Windows
 python -m venv venv
@@ -906,10 +916,13 @@ Linux / macOS
 python3 -m venv venv
 
 source venv/bin/activate
+
 ---
 3. Install dependencies
 pip install -r requirements.txt
+
 ---
+
 4. Configure environment variables
 
 Create a .env file:
@@ -948,9 +961,11 @@ docker compose logs -f
 Stop the stack:
 
 docker compose down
+
 ---
 
 ## 🌐 Accessing the Application
+
 Streamlit Dashboard
 http://localhost:8501
 FastAPI
@@ -962,7 +977,7 @@ http://localhost:8000/health/detailed
 Interactive API Documentation
 http://localhost:8000/docs
 
-## 📊 Example End-to-End Scenario
+📊 Example End-to-End Scenario
 
 A new transaction enters the system:
 ```
@@ -1091,7 +1106,9 @@ Centralized observability
 Infrastructure as Code
 
 These are future enhancements and are not currently required for the core system.
+
 ---
+
 ## 👨‍💻 Author
 
 Rithwik Ramadugu
@@ -1107,6 +1124,8 @@ Generative AI
 Cloud Computing
 
 ## ⭐ Project Highlights
+
+```
 ✔ Real-Time Kafka Data Pipeline
 ✔ MongoDB NoSQL Storage
 ✔ Event-Time Stream Processing
@@ -1119,6 +1138,7 @@ Cloud Computing
 ✔ Dockerized Microservice Architecture
 ✔ AWS EC2 Deployment
 ✔ Public Live Dashboard
+```
 ---
 ## 🔗 Project Links
 
