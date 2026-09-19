@@ -674,18 +674,29 @@ Environment-specific configuration is maintained using .env.
 Example configuration:
 
 -PROJECT_NAME=Real-Time Predictive Analytics & Anomaly Detection
+
 -VERSION=1.0.0
+
 -ENVIRONMENT=production
 
+
 -KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
 -TRANSACTION_TOPIC=transactions
+
 -CONSUMER_GROUP=analytics-group
 
+
+
 -MONGODB_URI=mongodb://mongodb:27017
+
 -DATABASE_NAME=retail_analytics
 
+
 -TRANSACTIONS_COLLECTION=transactions
+
 -ANOMALIES_COLLECTION=anomalies
+
 -PREDICTIONS_COLLECTION=predictions
 
 Sensitive environment files are excluded from Git using .gitignore.
@@ -778,8 +789,6 @@ FastAPI
         ↓
 Streamlit
 ```
-
----
 
 📈 Current System Scale
 
