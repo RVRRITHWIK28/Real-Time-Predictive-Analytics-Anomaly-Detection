@@ -367,12 +367,14 @@ Real-Time Prediction
 
 The daily demand dataset contains:
 
+```
 Product
 Store
 Date
 Demand
 Revenue
 Calendar information
+```
 
 Final feature dataset:
 
@@ -381,16 +383,18 @@ Final feature dataset:
 🧠 Feature Engineering
 
 The model uses:
-
+```
 Historical Demand Features
 lag_1
 lag_2
 lag_7
 rolling_mean_7
 Calendar Features
+```
 
 Examples include:
 
+```
 Day of week
 Day
 Month
@@ -401,6 +405,7 @@ Product
 Store
 Category
 Region
+```
 
 ⏱️ Time-Based Model Validation
 
@@ -425,6 +430,7 @@ Random Forest Regressor
 The project also includes a simple lag-based baseline for comparison.
 
 Baseline
+```
 MAE  : 9.56
 RMSE : 12.74
 MAPE : 74.55%
@@ -432,6 +438,7 @@ Random Forest
 MAE  : 7.41
 RMSE : 9.89
 MAPE : 57.95%
+```
 
 The model is persisted using:
 
@@ -504,35 +511,35 @@ Streamlit
 ```
 
 API Capabilities
-Health
+Health:
 GET /health
 GET /health/detailed
 Analytics
 
 Provides aggregated retail metrics.
 
-Predictions
+Predictions:
 GET /predictions/
 
 Supports prediction retrieval and filtering.
 
-Anomalies
+Anomalies:
 GET /anomalies/
 
 Provides detected anomaly information.
 
-Products
+Products:
 GET /products/
 
 Provides product-level information.
 
-Stores
+Stores:
 GET /stores/
 
 Provides store-level information.
 
 The API includes:
-
+```
 Filtering
 Sorting
 Result limits
@@ -540,11 +547,13 @@ Error handling
 MongoDB health checks
 404 handling
 Database connection cleanup
+```
 
 ## 9. Streamlit Dashboard
 
 The professional Streamlit dashboard provides a real-time monitoring interface.
 
+```
 Dashboard Features
 KPI Monitoring
 Transactions
@@ -572,6 +581,7 @@ Store
 Prediction date
 Model version
 Prediction Explorer
+```
 
 Allows users to inspect prediction results by product and store.
 
@@ -906,7 +916,6 @@ git clone https://github.com/RVRRITHWIK28/realtime-predictive-analytics.git
 
 cd realtime-predictive-analytics
 
----
 
 2. Create a virtual environment
 Windows
@@ -918,11 +927,9 @@ python3 -m venv venv
 
 source venv/bin/activate
 
----
 3. Install dependencies
 pip install -r requirements.txt
 
----
 
 4. Configure environment variables
 
@@ -969,14 +976,19 @@ docker compose down
 
 Streamlit Dashboard
 http://localhost:8501
+
 FastAPI
 http://localhost:8000
+
 FastAPI Health
 http://localhost:8000/health
+
 FastAPI Detailed Health
 http://localhost:8000/health/detailed
+
 Interactive API Documentation
 http://localhost:8000/docs
+
 
 📊 Example End-to-End Scenario
 
@@ -1088,7 +1100,9 @@ Application activity is written to application logs and console output.
 Containerization
 
 The application and supporting infrastructure are deployed as independent Docker services.
+
 ---
+
 ## 📌 Future Improvements
 
 Potential future improvements include:
