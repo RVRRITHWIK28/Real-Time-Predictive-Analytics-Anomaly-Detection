@@ -363,7 +363,7 @@ Model Persistence
 Real-Time Prediction
 ```
 
-## 📊 Training Dataset
+📊 Training Dataset
 
 The daily demand dataset contains:
 
@@ -378,7 +378,7 @@ Final feature dataset:
 
 3,680 rows × 15 features
 
-## 🧠 Feature Engineering
+🧠 Feature Engineering
 
 The model uses:
 
@@ -402,7 +402,7 @@ Store
 Category
 Region
 
-## ⏱️ Time-Based Model Validation
+⏱️ Time-Based Model Validation
 
 Instead of randomly splitting the data, the project uses a chronological split.
 
@@ -416,7 +416,7 @@ Sep 8 ───────── Sep 23       Sep 24 ───── Sep 30
 
 This better represents a real forecasting scenario where historical data is used to predict future observations.
 
-## 🤖 Model
+ 🤖 Model
 
 The primary demand prediction model is:
 
@@ -443,7 +443,8 @@ models/
 
 The reported metrics are based on the project's current synthetic dataset and evaluation split.
 
-## 🔮 Real-Time ML Prediction
+
+🔮 Real-Time ML Prediction
 
 The trained model is integrated into the streaming system.
 
@@ -640,7 +641,7 @@ http://52.7.190.86:8501
 
 ---
 
-## 🔐 Security & Configuration
+🔐 Security & Configuration
 
 Environment-specific configuration is maintained using .env.
 
@@ -663,7 +664,7 @@ PREDICTIONS_COLLECTION=predictions
 
 Sensitive environment files are excluded from Git using .gitignore.
 
-## 🧪 Testing & Validation
+🧪 Testing & Validation
 
 The project includes testing across multiple layers.
 
@@ -744,7 +745,7 @@ Streamlit
 
 ---
 
-## 📈 Current System Scale
+📈 Current System Scale
 
 The current synthetic environment includes:
 
