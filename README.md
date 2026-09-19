@@ -73,6 +73,8 @@ flowchart LR
     M --> N[Business Users]
 ```
 ## 🔄 End-to-End Data FlowPlaintext
+
+``
                  ┌───────────────────────┐
                  │   Transaction Source  │
                  └───────────┬───────────┘
@@ -120,6 +122,8 @@ flowchart LR
                   │    Streamlit    │
                   │    Dashboard    │
                   └─────────────────┘
+``
+
 ## ⚙️ Core Components
 
 
@@ -165,6 +169,8 @@ Channel and payment information
 
 Apache Kafka acts as the real-time event streaming layer.
 
+```
+
 Transaction Producer
         │
         ▼
@@ -176,6 +182,7 @@ Transaction Producer
 Transaction         Prediction
 Consumer             Consumer
 
+```
 Kafka is responsible for:
 
 Real-time event ingestion
@@ -191,13 +198,17 @@ The system also handles duplicate transaction events using event_id based idempo
 
 MongoDB is used as the primary NoSQL database.
 
+```
 Collections
 retail_analytics
 │
 ├── transactions
 ├── anomalies
 └── predictions
+```
+
 Transactions
+
 
 Stores incoming retail events.
 
@@ -229,6 +240,7 @@ Unique indexes and idempotency logic are used to prevent duplicate records.
 
 The stream processing layer performs event-time based processing.
 
+```
 Processing Flow
 Kafka Event
      │
@@ -248,6 +260,8 @@ Analytics
      ├── Quantity Metrics
      ├── Product Metrics
      └── Store Metrics
+
+```
 
 The system supports:
 
@@ -294,7 +308,7 @@ Business impact
 Recommendations
 
 Example anomaly processing:
-
+```
 Anomaly
    │
    ▼
@@ -306,6 +320,8 @@ Business Impact
    ▼
 Recommendation
 
+```
+
 This allows the system to move beyond simply saying:
 
 "Anomaly detected"
@@ -316,6 +332,7 @@ and instead provide context useful for business monitoring.
 
 The predictive component forecasts product demand.
 
+```
 ML Pipeline
 Historical Transactions
           │
@@ -342,6 +359,7 @@ Model Persistence
           │
           ▼
 Real-Time Prediction
+```
 
 ## 📊 Training Dataset
 
@@ -386,11 +404,13 @@ Region
 
 Instead of randomly splitting the data, the project uses a chronological split.
 
+```
 Historical Data
 ────────────────────────────────────────────>
 
 Training Period              Testing Period
 Sep 8 ───────── Sep 23       Sep 24 ───── Sep 30
+```
 
 This better represents a real forecasting scenario where historical data is used to predict future observations.
 
@@ -412,17 +432,19 @@ RMSE : 9.89
 MAPE : 57.95%
 
 The model is persisted using:
-
+```
 models/
 ├── demand_model.joblib
 └── demand_model_metadata.json
-
+```
 The reported metrics are based on the project's current synthetic dataset and evaluation split.
 
 ## 🔮 Real-Time ML Prediction
 
 The trained model is integrated into the streaming system.
 
+
+```
 Live Transactions
        │
        ▼
@@ -450,7 +472,7 @@ FastAPI
        │
        ▼
 Dashboard
-
+```
 Predictions are generated only when the relevant event-time period has completed.
 
 ## 8. FastAPI Backend
@@ -458,6 +480,7 @@ Predictions are generated only when the relevant event-time period has completed
 FastAPI provides the REST API layer between MongoDB and the dashboard.
 
 API Architecture
+```
 Streamlit
     │
     ▼
@@ -472,6 +495,9 @@ Streamlit
     │
     ▼
  MongoDB
+
+```
+
 API Capabilities
 Health
 GET /health
@@ -552,6 +578,7 @@ The dashboard automatically refreshes approximately every 5 seconds.
 
 The entire application is containerized using Docker Compose.
 
+```
 Services
 docker-compose.yml
 │
@@ -562,6 +589,7 @@ docker-compose.yml
 ├── transaction-consumer
 ├── prediction-consumer
 └── dashboard
+```
 Service Responsibilities
 Service	Responsibility
 Kafka	Event streaming
@@ -578,7 +606,9 @@ The application is deployed on:
 
 AWS EC2
 
+
 Infrastructure
+```
 AWS
 │
 └── EC2
@@ -592,6 +622,7 @@ AWS
         ├── Transaction Consumer
         ├── Prediction Consumer
         └── Streamlit
+```
 Deployment Components
 Amazon EC2
 Amazon Linux 2023
@@ -627,7 +658,7 @@ PREDICTIONS_COLLECTION=predictions
 
 Sensitive environment files are excluded from Git using .gitignore.
 
-🧪 Testing & Validation
+## 🧪 Testing & Validation
 
 The project includes testing across multiple layers.
 
@@ -686,7 +717,7 @@ The FastAPI test suite successfully passed:
 Production Validation
 
 The deployed AWS environment was verified end-to-end:
-
+```
 Transaction Producer
         ↓
 Kafka
@@ -704,7 +735,7 @@ MongoDB
 FastAPI
         ↓
 Streamlit
-
+```
 
 ## 📈 Current System Scale
 
@@ -722,6 +753,7 @@ ML model	Random Forest
 Dashboard refresh	~5 seconds
 
 ## 🗂️ Project Structure
+```
 realtime-predictive-analytics/
 │
 ├── data/
@@ -819,6 +851,7 @@ realtime-predictive-analytics/
 ├── .dockerignore
 ├── .gitignore
 └── README.md
+```
 
 
 ## 🛠️ Technology Stack
@@ -923,7 +956,7 @@ http://localhost:8000/docs
 ## 📊 Example End-to-End Scenario
 
 A new transaction enters the system:
-
+```
 Customer purchases Product P1004
             │
             ▼
@@ -968,7 +1001,7 @@ FastAPI
             │
             ▼
 Streamlit Dashboard
-
+```
 
 ## 💡 Key Engineering Concepts Demonstrated
 
