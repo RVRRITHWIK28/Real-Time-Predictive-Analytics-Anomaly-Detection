@@ -37,7 +37,7 @@ The architecture emphasizes production-grade patterns:
 ## 🎯 Objectives
 
 - Ingest and process high-throughput retail transactions in real time.
-- - Implement an event-driven ingestion pipeline with idempotent consumers.
+- Implement an event-driven ingestion pipeline with idempotent consumers.
 - Maintain a scalable, index-optimized operational data store using MongoDB.
 - Compute rolling aggregations (revenue, volume, AOV) over completed event-time windows.
 - Detect store- and product-level revenue and quantity anomalies with automated business impact scoring.
