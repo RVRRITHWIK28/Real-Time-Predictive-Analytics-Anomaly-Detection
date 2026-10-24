@@ -6,7 +6,7 @@ API_URL = "http://127.0.0.1:8000"
 
 
 st.set_page_config(
-    page_title="Real-Time Retail Analytics",
+    page_title="Online Retail Analytics",
     page_icon="📊",
     layout="wide",
 )
@@ -74,8 +74,20 @@ st_autorefresh(
     key="dashboard_refresh",
 )
 
-st.title("📊 Real-Time Retail Analytics")
-st.caption("Live analytics powered by Kafka, MongoDB and FastAPI")
+st.title("📊 Online Retail Analytics")
+st.caption("Online Retail II historical replay via Kafka, MongoDB and FastAPI")
+
+
+def country_language(value):
+    if value is None:
+        return value
+    return (
+        str(value)
+        .replace("store_quantity", "country_quantity")
+        .replace("Store activity", "Country sales activity")
+        .replace("store operations", "country market patterns")
+        .replace("at the store", "in that country market")
+    )
 
 
 # -----------------------------
@@ -112,7 +124,7 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        "Total Transactions",
+    "Sale Lines",
         f"{summary['total_transactions']:,}",
     )
 
@@ -125,13 +137,13 @@ with col2:
 with col3:
     st.metric(
         "Total Revenue",
-        f"₹{summary['total_revenue']:,.2f}",
+        f"£{summary['total_revenue']:,.2f}",
     )
 
 with col4:
     st.metric(
-        "Average Order Value",
-        f"₹{summary['average_order_value']:,.2f}",
+        "Average Sale Line Value",
+        f"£{summary.get('average_sale_line_value', summary['average_order_value']):,.2f}",
     )
 
 
@@ -151,8 +163,8 @@ with col1:
 
 with col2:
     st.metric(
-        "Unique Stores",
-        summary["unique_stores"],
+        "Countries",
+        summary.get("unique_countries", summary["unique_stores"]),
     )
 
 with col3:
@@ -210,15 +222,15 @@ nav1, nav2, nav3, nav4 = st.columns(
 with nav1:
     if st.button(
         "📊  Overview",
-        use_container_width=True,
+        width="stretch",
     ):
         st.session_state.active_section = "Overview"
 
 
 with nav2:
     if st.button(
-        "📦  Products & Stores",
-        use_container_width=True,
+        "📦  Products & Countries",
+        width="stretch",
     ):
         st.session_state.active_section = "Products"
 
@@ -226,7 +238,7 @@ with nav2:
 with nav3:
     if st.button(
         "🚨  Anomalies",
-        use_container_width=True,
+        width="stretch",
     ):
         st.session_state.active_section = "Anomalies"
 
@@ -234,7 +246,7 @@ with nav3:
 with nav4:
     if st.button(
         "🤖  Predictions",
-        use_container_width=True,
+        width="stretch",
     ):
         st.session_state.active_section = "Predictions"
 
@@ -271,7 +283,7 @@ if st.session_state.active_section == "Overview":
 
         st.line_chart(revenue_data)
 
-    st.header("📊 Daily Transaction Volume")
+    st.header("📊 Daily Sale Line Volume")
 
     if daily_data:
 
@@ -310,13 +322,12 @@ if st.session_state.active_section == "Products":
 
         st.dataframe(
             products,
-            use_container_width=True,
             hide_index=True,
         )
 
 
-    # Store Performance
-    st.header("🏪 Store Performance")
+    # Country Performance
+    st.header("🌍 Country Performance")
 
     try:
         store_response = requests.get(
@@ -329,14 +340,22 @@ if st.session_state.active_section == "Products":
         stores = store_response.json()["stores"]
 
     except requests.exceptions.RequestException:
-        st.error("Could not load store analytics.")
+        st.error("Could not load country analytics.")
         stores = []
 
     if stores:
 
+        country_rows = [
+            {
+                "Country": item.get("store_id"),
+                "Units Sold": item.get("total_quantity", 0),
+                "Revenue (GBP)": f"£{item.get('total_revenue', 0):,.2f}",
+                "Sale Lines": item.get("transaction_count", 0),
+            }
+            for item in stores
+        ]
         st.dataframe(
-            stores,
-            use_container_width=True,
+            country_rows,
             hide_index=True,
         )
 
@@ -404,18 +423,17 @@ if st.session_state.active_section == "Anomalies":
 
             anomaly_rows.append({
                 "Timestamp": anomaly.get("timestamp"),
-                "Type": anomaly.get("anomaly_type"),
+                "Type": country_language(anomaly.get("anomaly_type")),
                 "Entity": anomaly.get("entity_id"),
                 "Severity": anomaly.get("severity"),
                 "Ratio": anomaly.get("ratio"),
                 "Reason": anomaly.get("reason"),
-                "Business Impact": anomaly.get("business_impact"),
-                "Recommendation": anomaly.get("recommendation"),
+                "Business Impact": country_language(anomaly.get("business_impact")),
+                "Recommendation": country_language(anomaly.get("recommendation")),
             })
 
         st.dataframe(
             anomaly_rows,
-            use_container_width=True,
             hide_index=True,
         )
 
@@ -460,7 +478,7 @@ if st.session_state.active_section == "Predictions":
 
             prediction_rows.append({
                 "Product": prediction.get("product_id"),
-                "Store": prediction.get("store_id"),
+                "Country": prediction.get("store_id"),
                 "Predicted Demand": round(
                     prediction.get("predicted_demand", 0),
                     2,
@@ -472,7 +490,6 @@ if st.session_state.active_section == "Predictions":
 
         st.dataframe(
             prediction_rows,
-            use_container_width=True,
             hide_index=True,
         )
 
@@ -510,7 +527,7 @@ if st.session_state.active_section == "Predictions":
         )
 
         selected_store = st.selectbox(
-            "Select Store",
+            "Select Country",
             store_options,
         )
 
@@ -546,7 +563,7 @@ if st.session_state.active_section == "Predictions":
             with col3:
 
                 st.metric(
-                    "Store",
+                    "Country",
                     selected_store,
                 )
 
@@ -564,7 +581,7 @@ if st.session_state.active_section == "Predictions":
         else:
 
             st.info(
-                "No prediction available for this product and store."
+                "No prediction available for this product and country."
             )
 
     else:

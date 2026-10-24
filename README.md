@@ -1,8 +1,12 @@
 # Real-Time Predictive Analytics & Anomaly Detection Using NoSQL Data
 
 <p align="center">
-  <b>End-to-End Real-Time Retail Analytics, Anomaly Detection & Demand Prediction Platform</b>
+  <b>Retail Analytics, Anomaly Detection & Demand Prediction with Online Retail II Historical Replay</b>
 </p>
+
+> **Using the real dataset:** follow [ONLINE_RETAIL_II_SETUP.md](ONLINE_RETAIL_II_SETUP.md) for the VS Code setup, model preparation, and Kafka replay commands. This data mode uses historical 2009–2011 transactions; the public AWS demo remains unchanged until you deploy this project copy.
+
+> The older sections below document the original synthetic-data version of the project. The setup guide above is the active run path for Online Retail II.
 
 <p align="center">
   <a href="http://52.7.190.86:8501"><img src="https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Live Demo"></a>

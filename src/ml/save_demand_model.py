@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import joblib
 import pandas as pd
@@ -202,6 +203,7 @@ def train_and_save():
     # Save model
     # -----------------------------------------
 
+    Path(MODEL_FILE).parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(
         pipeline,
         MODEL_FILE,

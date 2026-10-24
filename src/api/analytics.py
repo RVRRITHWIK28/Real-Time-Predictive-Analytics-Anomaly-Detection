@@ -58,9 +58,12 @@ def get_analytics_summary():
             transactions.distinct("product_id")
         )
 
-        unique_stores = len(
-            transactions.distinct("store_id")
+        unique_countries = len(
+            [country for country in transactions.distinct("country") if country]
         )
+        if unique_countries == 0:
+            # Keep the endpoint compatible with older synthetic records.
+            unique_countries = len(transactions.distinct("store_id"))
 
         total_anomalies = anomalies.count_documents(
             {"is_anomaly": True}
@@ -77,8 +80,13 @@ def get_analytics_summary():
                 average_order_value,
                 2
             ),
+            "average_sale_line_value": round(
+                average_order_value,
+                2
+            ),
             "unique_products": unique_products,
-            "unique_stores": unique_stores,
+            "unique_countries": unique_countries,
+            "unique_stores": unique_countries,
             "total_anomalies": total_anomalies
         }
 
@@ -128,11 +136,16 @@ def get_daily_analytics():
             {
                 "$group": {
                     "_id": {
-                        "$dateToString": {
-                            "format": "%Y-%m-%d",
-                            "date": "$timestamp_date",
-                            "timezone": "UTC"
-                        }
+                        "$ifNull": [
+                            "$business_date",
+                            {
+                                "$dateToString": {
+                                    "format": "%Y-%m-%d",
+                                    "date": "$timestamp_date",
+                                    "timezone": "UTC"
+                                }
+                            }
+                        ]
                     },
                     "transaction_count": {
                         "$sum": 1

@@ -28,15 +28,15 @@ def run_live_analytics():
                 f"TOTAL | "
                 f"Transactions: {overall['total_transactions']} | "
                 f"Units: {overall['total_quantity']} | "
-                f"Revenue: Rs.{overall['total_revenue']} | "
-                f"AOV: Rs.{overall['average_order_value']}"
+                f"Revenue: £{overall['total_revenue']} | "
+                f"Average sale line: £{overall['average_order_value']}"
             )
 
             print(
                 f"LAST 60 SEC | "
                 f"Transactions: {window['transactions']} | "
                 f"Units: {window['quantity']} | "
-                f"Revenue: Rs.{window['revenue']}"
+                f"Revenue: £{window['revenue']}"
             )
 
     except KeyboardInterrupt:

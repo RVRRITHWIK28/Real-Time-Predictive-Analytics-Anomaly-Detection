@@ -19,7 +19,7 @@ def run_producer(interval_seconds=1):
                 f"Sent transaction: "
                 f"{transaction['event_id']} | "
                 f"Product: {transaction['product_id']} | "
-                f"Revenue: Rs.{transaction['revenue']}"
+                f"Revenue: £{transaction['revenue']}"
             )
 
             time.sleep(interval_seconds)
