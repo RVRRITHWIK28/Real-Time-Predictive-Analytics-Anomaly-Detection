@@ -259,9 +259,9 @@ class StreamAnalytics:
             f"Units: "
             f"{metrics['total_quantity']} | "
             f"Revenue: "
-            f"Rs.{metrics['total_revenue']} | "
-            f"AOV: "
-            f"Rs.{metrics['average_order_value']}"
+            f"£{metrics['total_revenue']} | "
+            f"Average sale line: "
+            f"£{metrics['average_order_value']}"
         )
 
 

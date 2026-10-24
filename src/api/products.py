@@ -31,6 +31,7 @@ def get_products():
                     {
                         "$group": {
                             "_id": "$product_id",
+                            "description": {"$first": "$description"},
                             "total_quantity": {"$sum": "$quantity"},
                             "total_revenue": {"$sum": "$revenue"},
                             "transaction_count": {"$sum": 1}
@@ -52,6 +53,7 @@ def get_products():
             result.append(
                 {
                     "product_id": product["_id"],
+                    "description": product.get("description"),
                     "total_quantity": product["total_quantity"],
                     "total_revenue": round(
                         product["total_revenue"],
@@ -103,6 +105,7 @@ def get_product(product_id: str):
                     "$group": {
                         "_id": "$product_id",
                         "category": {"$first": "$category"},
+                        "description": {"$first": "$description"},
                         "total_quantity": {"$sum": "$quantity"},
                         "total_revenue": {"$sum": "$revenue"},
                         "transaction_count": {"$sum": 1}
@@ -123,6 +126,7 @@ def get_product(product_id: str):
         return {
             "product_id": product["_id"],
             "category": product["category"],
+            "description": product.get("description"),
             "total_quantity": product["total_quantity"],
             "total_revenue": round(
                 product["total_revenue"],

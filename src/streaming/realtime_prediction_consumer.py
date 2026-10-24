@@ -44,12 +44,14 @@ def run_realtime_prediction_consumer():
 
     print("Kafka consumer started.")
     print("Waiting for transactions...")
+    processed_count = 0
 
     try:
 
         for transaction in consume_transactions(
             consumer
         ):
+            processed_count += 1
 
             # --------------------------------------------------
             # 1. Validate incoming Kafka transaction
@@ -80,14 +82,13 @@ def run_realtime_prediction_consumer():
                     transaction
                 )
 
-                print(
-                    f"Received: "
-                    f"{transaction['event_id']} | "
-                    f"Product: {transaction['product_id']} | "
-                    f"Store: {transaction['store_id']} | "
-                    f"Quantity: {transaction['quantity']} | "
-                    f"Bucket: {bucket}"
-                )
+                if processed_count % 10000 == 0:
+                    print(
+                        f"Processed {processed_count:,} sale lines | "
+                        f"Latest product: {transaction['product_id']} | "
+                        f"Country: {transaction['store_id']} | "
+                        f"Bucket: {bucket}"
+                    )
 
                 # --------------------------------------------------
                 # 3. Process completed minute buckets

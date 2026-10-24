@@ -33,7 +33,7 @@ def run_consumer():
                 f"Stored transaction: "
                 f"{transaction['event_id']} | "
                 f"Product: {transaction['product_id']} | "
-                f"Revenue: Rs.{transaction['revenue']}"
+                f"Revenue: £{transaction['revenue']}"
             )
 
     except KeyboardInterrupt:

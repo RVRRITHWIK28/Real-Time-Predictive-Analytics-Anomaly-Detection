@@ -110,8 +110,15 @@ services:
       - .env
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      TRANSACTION_TOPIC: transactions
+      ONLINE_RETAIL_ARCHIVE: /app/data/raw/online+retail+ii.zip
+    volumes:
+      - ./data/raw:/app/data/raw:ro
     command: >
-      python -m src.streaming.transaction_producer
+      python -m src.streaming.online_retail_producer
+      --archive /app/data/raw/online+retail+ii.zip
+      --flush-every 1000
+      --log-every 10000
     depends_on:
       kafka:
         condition: service_healthy

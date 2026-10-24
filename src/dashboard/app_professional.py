@@ -8,7 +8,7 @@ API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 
 st.set_page_config(
-    page_title="Real-Time Retail Intelligence",
+    page_title="Online Retail Intelligence",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -205,7 +205,7 @@ st_autorefresh(
 
 SECTIONS = {
     "Overview": "📊  Overview",
-    "Products": "📦  Products & Stores",
+    "Products": "📦  Products & Countries",
     "Anomalies": "🚨  Anomalies",
     "Predictions": "🤖  Predictions",
 }
@@ -226,14 +226,14 @@ def change_section(section):
 st.markdown(
     """
     <div class="hero">
-        <div class="hero-title">📊 Real-Time Retail Intelligence</div>
+        <div class="hero-title">📊 Online Retail Intelligence</div>
         <div class="hero-subtitle">
-            Predictive analytics, anomaly detection and business intelligence
-            powered by Kafka, MongoDB, FastAPI and machine learning.
+            Historical Online Retail II sales replayed through Kafka for
+            product, country, anomaly and demand analysis.
         </div>
         <div class="live-pill">
             <span class="live-dot"></span>
-            LIVE DATA • Auto-refreshing every 5 seconds
+            HISTORICAL REPLAY • Auto-refreshing every 5 seconds
         </div>
     </div>
     """,
@@ -274,19 +274,32 @@ def format_currency(value):
     value = float(value)
 
     if abs(value) >= 1_000_000_000:
-        return f"₹{value / 1_000_000_000:.2f}B"
+        return f"£{value / 1_000_000_000:.2f}B"
 
     if abs(value) >= 1_000_000:
-        return f"₹{value / 1_000_000:.2f}M"
+        return f"£{value / 1_000_000:.2f}M"
 
     if abs(value) >= 1_000:
-        return f"₹{value / 1_000:.1f}K"
+        return f"£{value / 1_000:.1f}K"
 
-    return f"₹{round(value):,}"
+    return f"£{round(value):,}"
 
 
 def format_units(value):
     return f"{round(float(value)):,} units"
+
+
+def country_language(value):
+    """Translate legacy store labels for Online Retail II's country grouping."""
+    if value is None:
+        return value
+    return (
+        str(value)
+        .replace("store_quantity", "country_quantity")
+        .replace("Store activity", "Country sales activity")
+        .replace("store operations", "country market patterns")
+        .replace("at the store", "in that country market")
+    )
 
 
 def show_section_heading(kicker, title, description):
@@ -324,7 +337,7 @@ kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
 with kpi1:
     st.metric(
-        "Total Transactions",
+        "Sale Lines",
         format_compact_number(summary.get("total_transactions", 0)),
     )
 
@@ -342,8 +355,13 @@ with kpi3:
 
 with kpi4:
     st.metric(
-        "Average Order Value",
-        format_currency(summary.get("average_order_value", 0)),
+        "Average Sale Line Value",
+        format_currency(
+            summary.get(
+                "average_sale_line_value",
+                summary.get("average_order_value", 0),
+            )
+        ),
     )
 
 
@@ -363,8 +381,8 @@ with kpi5:
 
 with kpi6:
     st.metric(
-        "Stores",
-        f"{round(float(summary.get('unique_stores', 0))):,}",
+        "Countries",
+        f"{round(float(summary.get('unique_countries', summary.get('unique_stores', 0)))):,}",
     )
 
 with kpi7:
@@ -408,7 +426,7 @@ for column, section in nav_columns:
         st.button(
             SECTIONS[section],
             key=f"nav_{section.lower()}",
-            use_container_width=True,
+            width="stretch",
             type=button_type,
             on_click=change_section,
             args=(section,),
@@ -427,7 +445,7 @@ if st.session_state.active_section == "Overview":
     show_section_heading(
         "Overview",
         "Business Performance",
-        "Monitor revenue and transaction activity across the retail network.",
+        "Review historical sales lines, revenue and activity over the dataset period.",
     )
 
     try:
@@ -451,7 +469,7 @@ if st.session_state.active_section == "Overview":
             st.line_chart(revenue_data)
 
         with chart2:
-            st.subheader("Transaction Volume")
+            st.subheader("Sale Line Volume")
 
             transaction_data = {
                 item["date"]: item["transaction_count"]
@@ -468,7 +486,7 @@ if st.session_state.active_section == "Overview":
             daily_rows.append(
                 {
                     "Date": item.get("date"),
-                    "Transactions": item.get("transaction_count", 0),
+                    "Sale Lines": item.get("transaction_count", 0),
                     "Revenue": format_currency(
                         item.get("total_revenue", 0)
                     ),
@@ -477,7 +495,6 @@ if st.session_state.active_section == "Overview":
 
         st.dataframe(
             daily_rows,
-            use_container_width=True,
             hide_index=True,
         )
 
@@ -486,15 +503,15 @@ if st.session_state.active_section == "Overview":
 
 
 # =========================================================
-# PRODUCTS & STORES
+# PRODUCTS & COUNTRIES
 # =========================================================
 
 if st.session_state.active_section == "Products":
 
     show_section_heading(
-        "Products & Stores",
+        "Products & Countries",
         "Retail Performance",
-        "Compare product and store performance using transaction-level MongoDB data.",
+        "Compare StockCode performance and country markets using the imported sales lines.",
     )
 
     try:
@@ -506,7 +523,7 @@ if st.session_state.active_section == "Products":
     try:
         stores = api_get("/stores/").get("stores", [])
     except requests.exceptions.RequestException:
-        st.error("Could not load store analytics.")
+        st.error("Could not load country analytics.")
         stores = []
 
     if products:
@@ -519,13 +536,14 @@ if st.session_state.active_section == "Products":
             product_rows.append(
                 {
                     "Product": product.get("product_id"),
+                    "Description": product.get("description"),
                     "Units Sold": round(
                         float(product.get("total_quantity", 0))
                     ),
                     "Revenue": format_currency(
                         product.get("total_revenue", 0)
                     ),
-                    "Transactions": round(
+                    "Sale Lines": round(
                         float(product.get("transaction_count", 0))
                     ),
                 }
@@ -533,7 +551,6 @@ if st.session_state.active_section == "Products":
 
         st.dataframe(
             product_rows,
-            use_container_width=True,
             hide_index=True,
         )
 
@@ -566,21 +583,21 @@ if st.session_state.active_section == "Products":
 
     if stores:
 
-        st.subheader("Store Performance")
+        st.subheader("Country Performance")
 
         store_rows = []
 
         for store in stores:
             store_rows.append(
                 {
-                    "Store": store.get("store_id"),
+                    "Country": store.get("store_id"),
                     "Units Sold": round(
                         float(store.get("total_quantity", 0))
                     ),
                     "Revenue": format_currency(
                         store.get("total_revenue", 0)
                     ),
-                    "Transactions": round(
+                    "Sale Lines": round(
                         float(store.get("transaction_count", 0))
                     ),
                 }
@@ -588,12 +605,11 @@ if st.session_state.active_section == "Products":
 
         st.dataframe(
             store_rows,
-            use_container_width=True,
             hide_index=True,
         )
 
     else:
-        st.info("No store analytics available.")
+        st.info("No country analytics available.")
 
 
 # =========================================================
@@ -660,19 +676,18 @@ if st.session_state.active_section == "Anomalies":
             anomaly_rows.append(
                 {
                     "Timestamp": anomaly.get("timestamp"),
-                    "Type": anomaly.get("anomaly_type"),
+                    "Type": country_language(anomaly.get("anomaly_type")),
                     "Entity": anomaly.get("entity_id"),
                     "Severity": anomaly.get("severity"),
                     "Ratio": anomaly.get("ratio"),
                     "Reason": anomaly.get("reason"),
-                    "Business Impact": anomaly.get("business_impact"),
-                    "Recommendation": anomaly.get("recommendation"),
+                    "Business Impact": country_language(anomaly.get("business_impact")),
+                    "Recommendation": country_language(anomaly.get("recommendation")),
                 }
             )
 
         st.dataframe(
             anomaly_rows,
-            use_container_width=True,
             hide_index=True,
         )
 
@@ -689,7 +704,7 @@ if st.session_state.active_section == "Predictions":
     show_section_heading(
         "Predictive Analytics",
         "Demand Forecasting",
-        "Explore machine-learning demand predictions generated by the real-time prediction pipeline.",
+        "Explore machine-learning forecasts generated from the historical sales replay.",
     )
 
     try:
@@ -739,7 +754,7 @@ if st.session_state.active_section == "Predictions":
             prediction_rows.append(
                 {
                     "Product": prediction.get("product_id"),
-                    "Store": prediction.get("store_id"),
+                    "Country": prediction.get("store_id"),
                     "Predicted Demand": round(
                         float(prediction.get("predicted_demand", 0))
                     ),
@@ -751,7 +766,6 @@ if st.session_state.active_section == "Predictions":
 
         st.dataframe(
             prediction_rows,
-            use_container_width=True,
             hide_index=True,
         )
 
@@ -787,7 +801,7 @@ if st.session_state.active_section == "Predictions":
 
         with explorer2:
             selected_store = st.selectbox(
-                "Select Store",
+                "Select Country",
                 store_options,
                 key="prediction_store",
             )
@@ -819,7 +833,7 @@ if st.session_state.active_section == "Predictions":
 
             with e3:
                 st.metric(
-                    "Store",
+                    "Country",
                     selected_store,
                 )
 
@@ -831,7 +845,7 @@ if st.session_state.active_section == "Predictions":
 
         else:
             st.info(
-                "No prediction is available for the selected product and store."
+                "No prediction is available for the selected product and country."
             )
 
     else:
@@ -845,7 +859,7 @@ if st.session_state.active_section == "Predictions":
 st.markdown(
     """
     <div class="footer">
-        Real-Time Retail Intelligence Platform • Kafka • MongoDB • FastAPI • ML
+        Online Retail II Historical Replay • Kafka • MongoDB • FastAPI • ML
     </div>
     """,
     unsafe_allow_html=True,

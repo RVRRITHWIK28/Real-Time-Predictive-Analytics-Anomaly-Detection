@@ -1,5 +1,7 @@
 numpy
 pandas
+openpyxl>=3.1,<4
+tzdata>=2025.1
 scikit-learn
 pymongo
 kafka-python

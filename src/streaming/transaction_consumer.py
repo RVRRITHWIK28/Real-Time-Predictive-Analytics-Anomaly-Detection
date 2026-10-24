@@ -65,12 +65,14 @@ def run_consumer():
 
                 inserted_count += 1
 
-                logger.info(
-                    "Inserted transaction: %s | Product: %s | Revenue: Rs.%s",
-                    transaction["event_id"],
-                    transaction["product_id"],
-                    transaction["revenue"],
-                )
+                if inserted_count % 10000 == 0:
+                    logger.info(
+                        "Inserted %s sale lines; latest event %s | Product %s | Revenue £%s",
+                        inserted_count,
+                        transaction["event_id"],
+                        transaction["product_id"],
+                        transaction["revenue"],
+                    )
 
             except DuplicateKeyError:
 

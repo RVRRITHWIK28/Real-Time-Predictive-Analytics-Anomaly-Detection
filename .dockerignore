@@ -8,6 +8,8 @@ __pycache__/
 .env
 logs/
 data/raw/
+data/processed/*
+!data/processed/daily_product_demand.csv
 .pytest_cache/
 .ipynb_checkpoints/
 notebooks/
