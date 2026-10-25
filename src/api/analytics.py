@@ -113,40 +113,57 @@ def get_daily_analytics():
 
         collection = database["transactions"]
 
+        # Online Retail II events already carry this date, so prefer it over
+        # parsing every timestamp while scanning the full transaction history.
         pipeline = [
             {
                 "$addFields": {
-                    "timestamp_date": {
-                        "$convert": {
-                            "input": "$timestamp",
-                            "to": "date",
-                            "onError": None,
-                            "onNull": None
+                    "analytics_date": {
+                        "$switch": {
+                            "branches": [
+                                {
+                                    "case": {
+                                        "$eq": [
+                                            {"$type": "$business_date"},
+                                            "string",
+                                        ]
+                                    },
+                                    "then": "$business_date",
+                                },
+                                {
+                                    "case": {
+                                        "$eq": [{"$type": "$timestamp"}, "string"]
+                                    },
+                                    "then": {"$substrBytes": ["$timestamp", 0, 10]},
+                                },
+                                {
+                                    "case": {
+                                        "$eq": [{"$type": "$timestamp"}, "date"]
+                                    },
+                                    "then": {
+                                        "$dateToString": {
+                                            "format": "%Y-%m-%d",
+                                            "date": "$timestamp",
+                                            "timezone": "UTC",
+                                        }
+                                    },
+                                },
+                            ],
+                            "default": None,
                         }
                     }
                 }
             },
             {
                 "$match": {
-                    "timestamp_date": {
-                        "$ne": None
+                    "analytics_date": {
+                        "$regex": r"^\d{4}-\d{2}-\d{2}$"
                     }
                 }
             },
             {
                 "$group": {
-                    "_id": {
-                        "$ifNull": [
-                            "$business_date",
-                            {
-                                "$dateToString": {
-                                    "format": "%Y-%m-%d",
-                                    "date": "$timestamp_date",
-                                    "timezone": "UTC"
-                                }
-                            }
-                        ]
-                    },
+                    "_id": "$analytics_date",
                     "transaction_count": {
                         "$sum": 1
                     },
@@ -164,7 +181,6 @@ def get_daily_analytics():
                 }
             }
         ]
-
         daily_data = list(
             collection.aggregate(pipeline)
         )

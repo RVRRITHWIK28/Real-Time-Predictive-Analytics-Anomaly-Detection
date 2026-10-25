@@ -1,7 +1,7 @@
+import pandas as pd
 import requests
 import streamlit as st
 import os
-from streamlit_autorefresh import st_autorefresh
 
 
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
@@ -190,16 +190,6 @@ st.markdown(
 
 
 # =========================================================
-# AUTO REFRESH
-# =========================================================
-
-st_autorefresh(
-    interval=30000,
-    key="dashboard_refresh",
-)
-
-
-# =========================================================
 # SESSION STATE / NAVIGATION
 # =========================================================
 
@@ -233,7 +223,7 @@ st.markdown(
         </div>
         <div class="live-pill">
             <span class="live-dot"></span>
-            HISTORICAL REPLAY • Auto-refreshing every 30 seconds
+            HISTORICAL REPLAY • Refresh the page to update
         </div>
     </div>
     """,
@@ -455,47 +445,51 @@ if st.session_state.active_section == "Overview":
         daily_data = []
 
     if daily_data:
+        analytics_frame = pd.DataFrame(daily_data)
+        analytics_frame["month"] = (
+            pd.to_datetime(analytics_frame["date"], errors="coerce")
+            .dt.to_period("M")
+            .dt.to_timestamp()
+        )
+        monthly_data = (
+            analytics_frame.dropna(subset=["month"])
+            .groupby("month", as_index=False)
+            .agg(
+                total_revenue=("total_revenue", "sum"),
+                transaction_count=("transaction_count", "sum"),
+            )
+            .sort_values("month")
+        )
 
         chart1, chart2 = st.columns(2, gap="large")
 
         with chart1:
-            st.subheader("Revenue Trend")
-
-            revenue_data = {
-                item["date"]: item["total_revenue"]
-                for item in daily_data
-            }
-
-            st.line_chart(revenue_data)
-
-        with chart2:
-            st.subheader("Sale Line Volume")
-
-            transaction_data = {
-                item["date"]: item["transaction_count"]
-                for item in daily_data
-            }
-
-            st.line_chart(transaction_data)
-
-        st.subheader("Daily Business Summary")
-
-        daily_rows = []
-
-        for item in daily_data:
-            daily_rows.append(
-                {
-                    "Date": item.get("date"),
-                    "Sale Lines": item.get("transaction_count", 0),
-                    "Revenue": format_currency(
-                        item.get("total_revenue", 0)
-                    ),
-                }
+            st.subheader("Monthly revenue trend")
+            st.line_chart(
+                monthly_data.set_index("month")[["total_revenue"]],
+                alt="Monthly revenue totals over time",
             )
 
+        with chart2:
+            st.subheader("Monthly sale line volume")
+            st.line_chart(
+                monthly_data.set_index("month")[["transaction_count"]],
+                alt="Monthly sale line totals over time",
+            )
+
+        st.subheader("Monthly business summary")
+        monthly_rows = [
+            {
+                "Month": item.month.strftime("%b %Y"),
+                "Sale Lines": int(item.transaction_count),
+                "Revenue": format_currency(item.total_revenue),
+            }
+            for item in monthly_data.itertuples(index=False)
+        ]
         st.dataframe(
-            daily_rows,
+            monthly_rows,
             hide_index=True,
+            alt="Monthly Online Retail II revenue and sale line totals",
         )
 
     else:

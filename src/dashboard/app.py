@@ -1,6 +1,6 @@
+import pandas as pd
 import requests
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 
 API_URL = "http://127.0.0.1:8000"
 
@@ -67,11 +67,6 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True,
-)
-
-st_autorefresh(
-    interval=5000,
-    key="dashboard_refresh",
 )
 
 st.title("📊 Online Retail Analytics")
@@ -260,7 +255,7 @@ st.divider()
 if st.session_state.active_section == "Overview":
 
     # Daily Analytics
-    st.header("📈 Daily Revenue Trend")
+    st.header("📈 Monthly revenue trend")
 
     try:
         daily_response = requests.get(
@@ -275,24 +270,34 @@ if st.session_state.active_section == "Overview":
         daily_data = []
 
     if daily_data:
+        analytics_frame = pd.DataFrame(daily_data)
+        analytics_frame["month"] = (
+            pd.to_datetime(analytics_frame["date"], errors="coerce")
+            .dt.to_period("M")
+            .dt.to_timestamp()
+        )
+        monthly_data = (
+            analytics_frame.dropna(subset=["month"])
+            .groupby("month", as_index=False)
+            .agg(
+                total_revenue=("total_revenue", "sum"),
+                transaction_count=("transaction_count", "sum"),
+            )
+            .sort_values("month")
+        )
 
-        revenue_data = {
-            item["date"]: item["total_revenue"]
-            for item in daily_data
-        }
+        st.line_chart(
+            monthly_data.set_index("month")[["total_revenue"]],
+            alt="Monthly revenue totals over time",
+        )
 
-        st.line_chart(revenue_data)
-
-    st.header("📊 Daily Sale Line Volume")
+    st.header("📊 Monthly sale line volume")
 
     if daily_data:
-
-        transaction_data = {
-            item["date"]: item["transaction_count"]
-            for item in daily_data
-        }
-
-        st.line_chart(transaction_data)
+        st.line_chart(
+            monthly_data.set_index("month")[["transaction_count"]],
+            alt="Monthly sale line totals over time",
+        )
 
 
 # =========================================================
