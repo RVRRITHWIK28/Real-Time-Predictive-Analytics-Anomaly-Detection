@@ -1,3 +1,4 @@
+import calendar
 import json
 import os
 import time
@@ -662,9 +663,7 @@ if st.session_state.active_section == "Products":
 
 # =========================================================
 # ANOMALIES
-# =========================================================
-
-if st.session_state.active_section == "Anomalies":
+# ===========================================if st.session_state.active_section == "Anomalies":
 
     show_section_heading(
         "Isolation Forest",
@@ -677,36 +676,160 @@ if st.session_state.active_section == "Anomalies":
         "alerts are review signals, not confirmed incidents."
     )
 
+    st.subheader("Filter anomalies by date and time")
+    st.caption("Choose a year, month, day, and UTC hour to locate matching revenue alerts.")
+
+    if "anomaly_page" not in st.session_state:
+        st.session_state["anomaly_page"] = 1
+
+    def reset_anomaly_page():
+        st.session_state["anomaly_page"] = 1
+
+    filter_columns = st.columns(5, gap="small")
+
+    with filter_columns[0]:
+        selected_year = st.selectbox(
+            "Calendar year",
+            ["All years", 2009, 2010, 2011],
+            key="anomaly_year_filter",
+            on_change=reset_anomaly_page,
+        )
+
+    month_options = ["All months", *calendar.month_name[1:]]
+    with filter_columns[1]:
+        selected_month_label = st.selectbox(
+            "Month",
+            month_options,
+            key="anomaly_month_filter",
+            on_change=reset_anomaly_page,
+        )
+    selected_month = (
+        month_options.index(selected_month_label)
+        if selected_month_label != "All months"
+        else None
+    )
+
+    if selected_month is None:
+        day_options = ["All days"]
+    else:
+        years_to_check = [2009, 2010, 2011] if selected_year == "All years" else [selected_year]
+        latest_valid_day = max(
+            calendar.monthrange(candidate_year, selected_month)[1]
+            for candidate_year in years_to_check
+        )
+        day_options = ["All days", *range(1, latest_valid_day + 1)]
+
+    day_key = "anomaly_day_filter"
+    if st.session_state.get(day_key) not in day_options:
+        st.session_state[day_key] = "All days"
+    with filter_columns[2]:
+        selected_day = st.selectbox(
+            "Day",
+            day_options,
+            disabled=selected_month is None,
+            key=day_key,
+            on_change=reset_anomaly_page,
+        )
+
+    with filter_columns[3]:
+        selected_time_scale = st.selectbox(
+            "Alert interval",
+            ["All intervals", "Hourly", "Daily"],
+            key="anomaly_time_scale_filter",
+            on_change=reset_anomaly_page,
+        )
+
+    hour_key = "anomaly_hour_filter"
+    if selected_time_scale == "Daily" and st.session_state.get(hour_key) is not None:
+        st.session_state[hour_key] = None
+    with filter_columns[4]:
+        selected_hour = st.selectbox(
+            "Hour (UTC)",
+            [None, *range(24)],
+            format_func=lambda value: "All hours" if value is None else f"{value:02d}:00",
+            disabled=selected_time_scale == "Daily",
+            key=hour_key,
+            on_change=reset_anomaly_page,
+        )
+
+    filter_params = {"is_anomaly": True, "limit": 100}
+    if selected_year != "All years":
+        filter_params["year"] = selected_year
+    if selected_month is not None:
+        filter_params["month"] = selected_month
+    if selected_day != "All days":
+        filter_params["day"] = selected_day
+    if selected_time_scale != "All intervals":
+        filter_params["time_scale"] = selected_time_scale.lower()
+    if selected_hour is not None:
+        filter_params["hour"] = selected_hour
+        filter_params["time_scale"] = "hourly"
+
+    page_number = max(1, int(st.session_state.get("anomaly_page", 1)))
+    anomaly_load_failed = False
     try:
-        anomalies = api_get(
+        anomaly_response = api_get(
             "/anomalies/",
-            params={
-                "is_anomaly": True,
-                "limit": 100,
-            },
-        ).get("anomalies", [])
+            params={**filter_params, "offset": (page_number - 1) * 100},
+        )
+        anomalies = anomaly_response.get("anomalies", [])
+        total_count = int(
+            anomaly_response.get("total_count", anomaly_response.get("count", len(anomalies)))
+        )
+        total_pages = max(1, (total_count + 99) // 100)
+
+        if page_number > total_pages:
+            page_number = total_pages
+            st.session_state["anomaly_page"] = page_number
+            anomaly_response = api_get(
+                "/anomalies/",
+                params={**filter_params, "offset": (page_number - 1) * 100},
+            )
+            anomalies = anomaly_response.get("anomalies", [])
+            total_count = int(
+                anomaly_response.get("total_count", anomaly_response.get("count", len(anomalies)))
+            )
+            total_pages = max(1, (total_count + 99) // 100)
     except requests.exceptions.RequestException:
         st.error("Could not load revenue anomaly data.")
         anomalies = []
+        total_count = 0
+        total_pages = 1
+        anomaly_load_failed = True
 
     hourly_count = int(summary.get("hourly_revenue_anomalies", 0))
     daily_count = int(summary.get("daily_revenue_anomalies", 0))
-    total_count = int(summary.get("total_anomalies", 0))
+    overall_count = int(summary.get("total_anomalies", 0))
 
     a1, a2, a3 = st.columns(3)
     with a1:
-        st.metric("Hourly Revenue Alerts", hourly_count)
+        st.metric("All-Time Hourly Revenue Alerts", hourly_count)
     with a2:
-        st.metric("Daily Revenue Alerts", daily_count)
+        st.metric("All-Time Daily Revenue Alerts", daily_count)
     with a3:
-        st.metric("Total Revenue Alerts", total_count)
+        st.metric("All-Time Revenue Alerts", overall_count)
 
-    if anomalies:
-        st.subheader("Recent Revenue Alerts")
+    st.caption(
+        f"{total_count:,} revenue alerts match the selected filters. "
+        "Results are ordered newest first; timestamps use UTC."
+    )
+
+    if total_pages > 1:
+        st.selectbox(
+            "Results page",
+            list(range(1, total_pages + 1)),
+            format_func=lambda page: f"Page {page} of {total_pages}",
+            key="anomaly_page",
+        )
+
+    if anomaly_load_failed:
+        st.info("The matching alert list is unavailable right now. Please try again shortly.")
+    elif anomalies:
+        st.subheader("Revenue Alerts")
         anomaly_rows = [
             {
                 "Time Scale": str(anomaly.get("time_scale", "")).title(),
-                "Timestamp": anomaly.get("timestamp"),
+                "Timestamp (UTC)": anomaly.get("timestamp"),
                 "Type": str(anomaly.get("anomaly_type", ""))
                 .replace("_", " ")
                 .title(),
@@ -724,12 +847,19 @@ if st.session_state.active_section == "Anomalies":
             anomaly_rows,
             hide_index=True,
         )
+    elif (
+        selected_year != "All years"
+        or selected_month is not None
+        or selected_day != "All days"
+        or selected_time_scale != "All intervals"
+        or selected_hour is not None
+    ):
+        st.info("No revenue alerts match those date and time filters. Try widening your selection.")
     else:
         st.info(
             "No hourly or daily revenue outliers have been recorded yet. "
             "The models need at least 14 days of hourly history and 60 days of daily history."
         )
-
 
 # =========================================================
 # PREDICTIONS
