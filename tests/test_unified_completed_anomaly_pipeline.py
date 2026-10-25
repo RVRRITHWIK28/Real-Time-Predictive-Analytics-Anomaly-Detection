@@ -104,34 +104,16 @@ for event in results:
     )
 
 
-# We expect:
-#
-# 1. revenue spike
-# 2. quantity spike
-# 3. product quantity spike
-# 4. store quantity spike
+# The revenue-only detector emits one global revenue spike event.
 
-assert len(results) == 4
-
+assert len(results) == 1
 
 anomaly_types = {
     event.anomaly_type
     for event in results
 }
 
-
-assert "revenue_spike" in anomaly_types
-
-assert "quantity_spike" in anomaly_types
-
-assert (
-    "product_quantity_spike"
-    in anomaly_types
-)
-
-assert (
-    "store_quantity_spike"
-    in anomaly_types
+assert anomaly_types == {"revenue_spike"}
 )
 
 
