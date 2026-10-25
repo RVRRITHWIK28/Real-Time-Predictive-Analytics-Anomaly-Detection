@@ -194,7 +194,7 @@ st.markdown(
 # =========================================================
 
 st_autorefresh(
-    interval=5000,
+    interval=30000,
     key="dashboard_refresh",
 )
 
@@ -233,7 +233,7 @@ st.markdown(
         </div>
         <div class="live-pill">
             <span class="live-dot"></span>
-            HISTORICAL REPLAY • Auto-refreshing every 5 seconds
+            HISTORICAL REPLAY • Auto-refreshing every 30 seconds
         </div>
     </div>
     """,
@@ -249,7 +249,7 @@ def api_get(endpoint, params=None):
     response = requests.get(
         f"{API_URL}{endpoint}",
         params=params,
-        timeout=5,
+        timeout=30,
     )
     response.raise_for_status()
     return response.json()

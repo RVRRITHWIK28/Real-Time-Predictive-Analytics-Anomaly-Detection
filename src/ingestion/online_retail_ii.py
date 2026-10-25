@@ -6,7 +6,7 @@ import hashlib
 import shutil
 import tempfile
 from datetime import datetime
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Iterator
 from zipfile import ZipFile
@@ -155,9 +155,7 @@ def iter_online_retail_sales(
                                 continue
 
                             quantity = int(quantity_decimal)
-                            revenue = (quantity_decimal * unit_price_decimal).quantize(
-                                Decimal("0.01"), rounding=ROUND_HALF_UP
-                            )
+                            revenue = quantity_decimal * unit_price_decimal
                             country = _text(row[positions["country"]]) or "Unknown"
                             customer = _text(row[positions["customer id"]]) or None
                             description = _text(row[positions["description"]]) or None
