@@ -217,6 +217,10 @@ st.markdown(
         text-shadow: 0 0 18px rgba(56, 189, 248, 0.22);
     }
 
+    div[data-testid="stMetric"]:hover [data-testid="stMetricLabel"] {
+        color: #c4b5fd;
+    }
+
     div[data-testid="stMetricLabel"] {
         color: #94a3b8;
     }
@@ -369,11 +373,6 @@ def check_backend_status():
 # =========================================================
 
 backend_label, backend_tone = check_backend_status()
-last_updated_label = st.session_state.get(
-    "_dashboard_last_updated",
-    "No successful data refresh yet",
-)
-
 st.markdown(
     f"""
     <div class="hero">
@@ -400,7 +399,7 @@ st.markdown(
             <span class="live-dot"></span>
             {backend_label}
         </div>
-        <p class="hero-meta">Last successful dashboard data fetch: {last_updated_label} · refresh manually at any time</p>
+        <p class="hero-meta">API and database connectivity are checked directly.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -423,6 +422,8 @@ def api_get(endpoint, params=None, ttl_seconds=20):
         and cached_at is not None
         and (datetime.now(timezone.utc) - cached_at).total_seconds() <= ttl_seconds
     ):
+        if backend_tone != "good":
+            st.session_state["_api_using_cached_data"] = True
         return st.session_state[cache_key]
     last_error = None
 
