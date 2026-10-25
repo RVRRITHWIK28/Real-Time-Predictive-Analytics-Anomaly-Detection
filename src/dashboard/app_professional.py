@@ -707,8 +707,8 @@ if st.session_state.active_section == "Products":
             if not chart_data.empty:
                 st.bar_chart(
                     chart_data,
-                    x="Units Sold",
-                    y="Country",
+                    x="Country",
+                    y="Units Sold",
                     horizontal=True,
                     sort="-Units Sold",
                     height=540,
