@@ -890,153 +890,229 @@ if st.session_state.active_section == "Predictions":
 
     show_section_heading(
         "Predictive Analytics",
-        "Demand Forecasting",
-        "Explore machine-learning forecasts generated from the historical sales replay.",
+        "Weekly StockCode Demand Forecast",
+        "Estimate how many units of a selected StockCode a country may need in each upcoming dataset week.",
     )
 
-    try:
-        predictions = api_get(
-            "/predictions/",
-            params={
-                "limit": 20,
-            },
-        ).get("predictions", [])
+    st.warning(
+        "Online Retail II contains historical transactions from 2009–2011. "
+        "Forecast dates begin after the selected product's latest sales week in "
+        "that dataset, so they are historical projections rather than dates after today."
+    )
 
-    except requests.exceptions.RequestException:
-        st.error("Could not load demand predictions.")
-        predictions = []
+    if "weekly_forecast_countries" not in st.session_state:
+        try:
+            country_options_response = api_get("/predictions/weekly/options")
+            st.session_state["weekly_forecast_countries"] = (
+                country_options_response.get("countries", [])
+            )
+        except requests.exceptions.RequestException:
+            st.error("Could not load the countries. Check the analytics API connection.")
+    country_options = st.session_state.get("weekly_forecast_countries", [])
 
-    if predictions:
-
-        prediction_values = [
-            float(item.get("predicted_demand", 0))
-            for item in predictions
-        ]
-
-        p1, p2, p3 = st.columns(3)
-
-        with p1:
-            st.metric(
-                "Latest Prediction",
-                f"{round(prediction_values[0]):,} units",
+    if country_options:
+        filter_columns = st.columns([1, 1.4, 1])
+        with filter_columns[0]:
+            selected_country = st.selectbox(
+                "Country",
+                country_options,
+                key="weekly_forecast_country",
+            )
+        previous_country = st.session_state.get("weekly_forecast_last_country")
+        if previous_country != selected_country:
+            st.session_state["weekly_forecast_search"] = ""
+            st.session_state["weekly_forecast_search_input"] = ""
+            st.session_state["weekly_forecast_stock_options_key"] = None
+            st.session_state["weekly_forecast_last_country"] = selected_country
+        with filter_columns[1]:
+            with st.form("weekly_stock_code_search_form"):
+                search_input = st.text_input(
+                    "Search StockCode or description",
+                    key="weekly_forecast_search_input",
+                    placeholder="Type a StockCode or product description",
+                )
+                apply_search = st.form_submit_button("Find StockCodes")
+        if apply_search:
+            st.session_state["weekly_forecast_search"] = search_input.strip()
+        stock_code_search = st.session_state.get("weekly_forecast_search", "")
+        with filter_columns[2]:
+            horizon_weeks = st.slider(
+                "Forecast horizon (weeks)",
+                min_value=1,
+                max_value=13,
+                value=13,
+                help="Choose 1–13 weekly forecasts (up to approximately 3 months).",
+                key="weekly_forecast_horizon",
             )
 
-        with p2:
-            st.metric(
-                "Predictions Loaded",
-                len(predictions),
-            )
+        options_key = (selected_country, stock_code_search)
+        if st.session_state.get("weekly_forecast_stock_options_key") != options_key:
+            try:
+                stock_options_response = api_get(
+                    "/predictions/weekly/options",
+                    params={
+                        "country": selected_country,
+                        "search": stock_code_search or None,
+                        "limit": 50,
+                    },
+                )
+                st.session_state["weekly_forecast_stock_options"] = (
+                    stock_options_response.get("stock_codes", [])
+                )
+                st.session_state["weekly_forecast_stock_options_key"] = options_key
+            except requests.exceptions.RequestException:
+                st.error("Could not load StockCodes for the selected country.")
+        stock_codes = st.session_state.get("weekly_forecast_stock_options", [])
+        if st.session_state.get("weekly_forecast_stock_options_key") != options_key:
+            stock_codes = []
 
-        with p3:
-            st.metric(
-                "Average Predicted Demand",
-                f"{round(sum(prediction_values) / len(prediction_values)):,} units",
-            )
-
-        st.subheader("Recent Predictions")
-
-        prediction_rows = []
-
-        for prediction in predictions:
-            prediction_rows.append(
-                {
-                    "Product": prediction.get("product_id"),
-                    "Country": prediction.get("store_id"),
-                    "Predicted Demand": round(
-                        float(prediction.get("predicted_demand", 0))
-                    ),
-                    "Prediction Date": prediction.get("prediction_date"),
-                    "Model Version": prediction.get("model_version"),
-                    "Created At": prediction.get("created_at"),
-                }
-            )
-
-        st.dataframe(
-            prediction_rows,
-            hide_index=True,
-        )
-
-        st.markdown("<div style='height: 12px'></div>", unsafe_allow_html=True)
-
-        st.subheader("Prediction Explorer")
-
-        explorer1, explorer2 = st.columns(2, gap="large")
-
-        product_options = sorted(
-            {
-                prediction.get("product_id")
-                for prediction in predictions
-                if prediction.get("product_id")
+        if stock_codes:
+            stock_by_code = {
+                item["stock_code"]: item
+                for item in stock_codes
+                if item.get("stock_code")
             }
-        )
-
-        with explorer1:
-            selected_product = st.selectbox(
-                "Select Product",
-                product_options,
-                key="prediction_product",
+            code_options = list(stock_by_code)
+            if (
+                st.session_state.get("weekly_forecast_stock_code")
+                not in code_options
+            ):
+                st.session_state["weekly_forecast_stock_code"] = code_options[0]
+            selected_stock_code = st.selectbox(
+                "StockCode",
+                code_options,
+                format_func=lambda code: (
+                    f"{code} — {stock_by_code[code].get('description') or 'Description unavailable'}"
+                ),
+                key="weekly_forecast_stock_code",
             )
 
-        store_options = sorted(
-            {
-                prediction.get("store_id")
-                for prediction in predictions
-                if prediction.get("product_id") == selected_product
-                and prediction.get("store_id")
-            }
-        )
-
-        with explorer2:
-            selected_store = st.selectbox(
-                "Select Country",
-                store_options,
-                key="prediction_store",
-            )
-
-        selected_predictions = [
-            prediction
-            for prediction in predictions
-            if prediction.get("product_id") == selected_product
-            and prediction.get("store_id") == selected_store
-        ]
-
-        if selected_predictions:
-
-            latest_prediction = selected_predictions[0]
-
-            e1, e2, e3 = st.columns(3)
-
-            with e1:
-                st.metric(
-                    "Predicted Demand",
-                    f"{round(float(latest_prediction.get('predicted_demand', 0))):,} units",
-                )
-
-            with e2:
-                st.metric(
-                    "Product",
-                    selected_product,
-                )
-
-            with e3:
-                st.metric(
-                    "Country",
-                    selected_store,
-                )
-
+            selected_stock = stock_by_code[selected_stock_code]
             st.caption(
-                f"Prediction date: "
-                f"{latest_prediction.get('prediction_date', 'N/A')}  •  "
-                f"Model: {latest_prediction.get('model_version', 'N/A')}"
+                f"{selected_stock.get('sale_lines', 0):,} historical sale lines · "
+                f"{selected_stock.get('units_sold', 0):,} units sold in {selected_country}"
             )
 
+            request_key = {
+                "country": selected_country,
+                "stock_code": selected_stock_code,
+                "weeks": horizon_weeks,
+            }
+            if st.button("Generate weekly forecast", type="primary"):
+                st.session_state.pop("weekly_forecast_result", None)
+                st.session_state.pop("weekly_forecast_request", None)
+                try:
+                    with st.spinner(
+                        "Training the Random Forest model on this product's weekly sales..."
+                    ):
+                        forecast_response = api_get(
+                            "/predictions/weekly-forecast",
+                            params=request_key,
+                        )
+                    st.session_state["weekly_forecast_result"] = forecast_response
+                    st.session_state["weekly_forecast_request"] = request_key
+                except requests.exceptions.HTTPError as error:
+                    detail = "Forecast could not be generated."
+                    try:
+                        detail = error.response.json().get("detail", detail)
+                    except (AttributeError, ValueError):
+                        pass
+                    st.error(str(detail))
+                except requests.exceptions.RequestException:
+                    st.error("Could not reach the analytics API to generate the forecast.")
+
+            forecast_result = st.session_state.get("weekly_forecast_result")
+            forecast_request = st.session_state.get("weekly_forecast_request")
+            if forecast_result and forecast_request == request_key:
+                st.success(
+                    f"Random Forest forecast ready for {selected_stock_code} in {selected_country}."
+                )
+                latest_week = forecast_result.get("last_observed_week", "unknown")
+                st.caption(
+                    f"Weekly history: {forecast_result.get('history_start_week')} "
+                    f"through {latest_week}. The first forecast week starts immediately "
+                    "after that final historical week."
+                )
+
+                forecast_rows = forecast_result.get("forecast", [])
+                total_units = sum(
+                    int(item.get("predicted_units", 0))
+                    for item in forecast_rows
+                )
+                metric_columns = st.columns(3)
+                with metric_columns[0]:
+                    st.metric("Forecast Units", f"{total_units:,}")
+                with metric_columns[1]:
+                    st.metric("Forecast Weeks", len(forecast_rows))
+                with metric_columns[2]:
+                    st.metric(
+                        "Historical Weeks",
+                        f"{forecast_result.get('history_weeks', 0):,}",
+                    )
+
+                week_options = ["All weeks", *range(1, len(forecast_rows) + 1)]
+                if (
+                    st.session_state.get("weekly_forecast_week_filter")
+                    not in week_options
+                ):
+                    st.session_state["weekly_forecast_week_filter"] = "All weeks"
+                selected_week = st.selectbox(
+                    "Filter by forecast week",
+                    week_options,
+                    format_func=lambda week: (
+                        week if isinstance(week, str) else f"Week {week}"
+                    ),
+                    key="weekly_forecast_week_filter",
+                )
+                visible_rows = forecast_rows
+                if selected_week != "All weeks":
+                    visible_rows = [
+                        item
+                        for item in forecast_rows
+                        if item.get("week_number") == selected_week
+                    ]
+
+                table_rows = [
+                    {
+                        "Forecast Week": f"Week {item['week_number']}",
+                        "Week Starts": item.get("week_start"),
+                        "Week Ends": item.get("week_end"),
+                        "Predicted Units Required": item.get("predicted_units", 0),
+                    }
+                    for item in visible_rows
+                ]
+                st.dataframe(
+                    pd.DataFrame(table_rows),
+                    hide_index=True,
+                    use_container_width=True,
+                )
+                if visible_rows:
+                    chart_data = pd.DataFrame(
+                        [
+                            {
+                                "Week starting": item.get("week_start"),
+                                "Predicted units": item.get("predicted_units", 0),
+                            }
+                            for item in visible_rows
+                        ]
+                    ).set_index("Week starting")
+                    st.line_chart(chart_data)
+                st.caption(
+                    "The model is trained separately for the selected country and "
+                    "StockCode. Future weeks are predicted recursively, so each "
+                    "later estimate also uses earlier forecast estimates."
+                )
+        elif stock_code_search.strip():
+            st.info(
+                "No StockCodes in this country match that search. Try another code "
+                "or part of the product description."
+            )
         else:
             st.info(
-                "No prediction is available for the selected product and country."
+                "No StockCodes with positive historical sales were found for this country."
             )
-
     else:
-        st.info("No demand predictions available yet.")
+        st.info("No countries with positive historical sales are available.")
 
 
 if st.session_state.get("_api_using_cached_data"):
