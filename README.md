@@ -1195,3 +1195,7 @@ Cloud Computing.
 🌐 Live Demo: http://52.7.190.86:8501
 
 💻 GitHub: https://github.com/RVRRITHWIK28/realtime-predictive-analytics.git
+
+## Hourly and daily revenue anomaly detection
+
+The revenue anomaly service uses separate Isolation Forest models on London-time hourly and daily sale revenue. See [the model notes](docs/hourly-daily-revenue-anomalies.md) for the warm-up windows, contamination setting, interpretation of counts, and limitations.

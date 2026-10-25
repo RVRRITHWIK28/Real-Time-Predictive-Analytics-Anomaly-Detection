@@ -5,29 +5,19 @@ from pydantic import BaseModel
 
 
 class AnomalyEvent(BaseModel):
-
     timestamp: datetime
-
     bucket: datetime
-
     anomaly_type: str
-
     entity_id: str
-
     is_anomaly: bool
-
     reason: str
-
     ratio: Optional[float]
-
     current_value: float
-
     baseline_value: float
-
     severity: str
-
     message: str
-
     business_impact: str
-
     recommendation: str
+    time_scale: Optional[str] = None
+    model_version: Optional[str] = None
+    anomaly_score: Optional[float] = None

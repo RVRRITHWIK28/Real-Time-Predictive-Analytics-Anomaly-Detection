@@ -160,6 +160,7 @@ services:
       ANOMALY_CONSUMER_GROUP: online-retail-anomaly-detection
       ANOMALY_EVENT_TIME_LATENESS_SECONDS: "120"
       ANOMALY_IDLE_FLUSH_SECONDS: "30"
+      REVENUE_IF_CONTAMINATION: ${REVENUE_IF_CONTAMINATION:-0.01}
     command: >
       python -m src.streaming.anomaly_consumer
     depends_on:

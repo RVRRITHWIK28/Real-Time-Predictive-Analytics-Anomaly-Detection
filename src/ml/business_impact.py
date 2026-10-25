@@ -19,7 +19,7 @@ def generate_business_impact(
         }
 
     # Revenue anomaly
-    if anomaly_type == "revenue_spike":
+    if anomaly_type == "revenue_spike" or anomaly_type.endswith("_revenue_spike"):
 
         return {
             "business_impact": (
@@ -32,7 +32,7 @@ def generate_business_impact(
             ),
         }
 
-    if anomaly_type == "revenue_drop":
+    if anomaly_type == "revenue_drop" or anomaly_type.endswith("_revenue_drop"):
 
         return {
             "business_impact": (

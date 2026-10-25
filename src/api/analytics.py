@@ -65,13 +65,18 @@ def get_analytics_summary():
             # Keep the endpoint compatible with older synthetic records.
             unique_countries = len(transactions.distinct("store_id"))
 
-        total_anomalies = anomalies.count_documents(
-            {
-                "is_anomaly": True,
-                "anomaly_type": {
-                    "$in": ["revenue_spike", "revenue_drop"]
-                },
-            }
+        model_query = {
+            "is_anomaly": True,
+            "model_version": "isolation_forest_v1",
+        }
+        hourly_revenue_anomalies = anomalies.count_documents(
+            {**model_query, "time_scale": "hourly"}
+        )
+        daily_revenue_anomalies = anomalies.count_documents(
+            {**model_query, "time_scale": "daily"}
+        )
+        total_anomalies = (
+            hourly_revenue_anomalies + daily_revenue_anomalies
         )
 
         return {
@@ -92,7 +97,9 @@ def get_analytics_summary():
             "unique_products": unique_products,
             "unique_countries": unique_countries,
             "unique_stores": unique_countries,
-            "total_anomalies": total_anomalies
+            "total_anomalies": total_anomalies,
+            "hourly_revenue_anomalies": hourly_revenue_anomalies,
+            "daily_revenue_anomalies": daily_revenue_anomalies
         }
 
     except Exception:
