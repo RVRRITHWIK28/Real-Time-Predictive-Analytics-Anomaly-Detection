@@ -116,12 +116,14 @@ st.markdown(
         margin: 0;
     }
 
-    .hero-subtitle {
-        max-width: 820px;
+    .hero .hero-subtitle {
+        width: 100%;
+        max-width: 1100px;
         margin: 0.72rem auto 0;
         color: #a8b5ca;
         font-size: 0.96rem;
         line-height: 1.6;
+        text-align: center !important;
     }
 
     .hero-meta {
@@ -129,6 +131,16 @@ st.markdown(
         color: #71809a;
         font-size: 0.75rem;
         letter-spacing: 0.02em;
+    }
+
+    .refresh-meta {
+        margin-top: 0.12rem;
+        color: #71809a;
+        font-size: 0.64rem;
+        line-height: 1.1;
+        letter-spacing: -0.015em;
+        white-space: nowrap;
+        text-align: right;
     }
 
     .live-pill {
@@ -295,8 +307,15 @@ st.markdown(
             height: 44px;
         }
 
-        .hero-subtitle {
+        .hero .hero-subtitle {
             font-size: 0.92rem;
+        }
+
+        .refresh-meta {
+            white-space: normal;
+            text-align: left;
+            font-size: 0.72rem;
+            line-height: 1.25;
         }
     }
 
@@ -598,8 +617,9 @@ with refresh_columns[1]:
         width="stretch",
         on_click=request_dashboard_refresh,
     )
-    st.caption(
-        f"Last refreshed: {st.session_state.get('_dashboard_last_updated', 'not yet')}"
+    st.markdown(
+        f'<div class="refresh-meta">Last refreshed: {st.session_state.get("_dashboard_last_updated", "not yet")}</div>',
+        unsafe_allow_html=True,
     )
 
 
