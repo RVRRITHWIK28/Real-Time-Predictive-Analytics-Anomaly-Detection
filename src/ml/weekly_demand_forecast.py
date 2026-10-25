@@ -107,5 +107,9 @@ def forecast_weekly_units(history: list[dict], horizon_weeks: int) -> dict:
         "history_weeks": len(weeks),
         "weeks_with_sales": len(units_by_week),
         "historical_units": int(round(sum(values))),
+        "history": [
+            {"week_start": week.isoformat(), "units": int(round(units))}
+            for week, units in zip(weeks, values)
+        ],
         "forecast": future,
     }

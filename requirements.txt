@@ -12,3 +12,4 @@ requests
 python-dotenv
 pydantic
 streamlit-autorefresh
+plotly>=5.24,<7
