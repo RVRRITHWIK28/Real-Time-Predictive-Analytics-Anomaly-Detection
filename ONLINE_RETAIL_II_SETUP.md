@@ -60,6 +60,10 @@ docker compose logs -f transaction-producer
 
 The full workbook has over one million transaction rows, so the initial replay can take time. The producer reports how many source rows were sent and how many cancellations, returns/adjustments, and invalid rows it skipped.
 
+The anomaly-consumer service analyzes transactions already stored in MongoDB in timestamp order when it starts, stores detected alerts in the anomalies collection, then listens for new Kafka transactions. Follow its progress with: docker compose logs -f anomaly-consumer.
+
+The existing detector compares each non-empty minute with the preceding five observed buckets; a value at least twice or at most half of its baseline is flagged. Refresh the dashboard after the backfill reports completion.
+
 ## How source fields are represented
 
 - `StockCode` becomes the product identifier, and the supplied description is retained. The dataset has no category field, so `category` is marked `Unclassified`.
@@ -71,3 +75,4 @@ The full workbook has over one million transaction rows, so the initial replay c
 ## Scope
 
 The public AWS demo is not changed by this local source bundle. To see these changes at the existing URL, you would still need to deploy this source and configure the AWS environment for the dataset. The synthetic data generator remains available for the original demo; Docker Compose now starts the Online Retail II replay producer.
+
