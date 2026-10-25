@@ -54,46 +54,97 @@ st.markdown(
 
     /* ---------- Header ---------- */
 
+    @keyframes enter-soft {
+        from { opacity: 0; transform: translateY(9px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes mark-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+    }
+
+    @keyframes live-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.32); }
+        55% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+    }
+
     .hero {
-        padding: 1.4rem 1.6rem;
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        padding: 2.1rem 1.6rem 1.75rem;
         margin-bottom: 1.2rem;
-        border: 1px solid rgba(148, 163, 184, 0.16);
-        border-radius: 20px;
-        background: rgba(15, 23, 42, 0.72);
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.20);
+        border: 1px solid rgba(129, 140, 248, 0.22);
+        border-radius: 22px;
+        background: linear-gradient(135deg, rgba(17, 27, 51, 0.96), rgba(15, 23, 42, 0.90));
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.24);
+        text-align: center;
+        animation: enter-soft 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+
+    .hero::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        background:
+            radial-gradient(circle at 50% -28%, rgba(99, 102, 241, 0.27), transparent 46%),
+            radial-gradient(circle at 12% 100%, rgba(14, 165, 233, 0.10), transparent 34%);
+        pointer-events: none;
+    }
+
+    .hero-mark {
+        display: block;
+        width: 50px;
+        height: 50px;
+        margin: 0 auto 0.72rem;
+        filter: drop-shadow(0 8px 18px rgba(99, 102, 241, 0.28));
+        animation: mark-float 5s ease-in-out infinite;
     }
 
     .hero-title {
-        font-size: 2rem;
-        font-weight: 750;
-        margin-bottom: 0.25rem;
+        color: #f8fafc;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        font-weight: 780;
+        letter-spacing: -0.045em;
+        line-height: 1.08;
+        margin: 0;
     }
 
     .hero-subtitle {
-        color: #94a3b8;
-        font-size: 0.98rem;
+        max-width: 820px;
+        margin: 0.72rem auto 0;
+        color: #a8b5ca;
+        font-size: 1rem;
+        line-height: 1.65;
     }
 
     .live-pill {
         display: inline-flex;
         align-items: center;
-        gap: 7px;
-        padding: 6px 11px;
+        justify-content: center;
+        gap: 9px;
+        max-width: 100%;
+        margin: 1.05rem auto 0;
+        padding: 0.58rem 0.95rem;
         border-radius: 999px;
-        border: 1px solid rgba(34, 197, 94, 0.30);
-        background: rgba(34, 197, 94, 0.10);
-        color: #86efac;
+        border: 1px solid rgba(34, 197, 94, 0.34);
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.13), rgba(16, 185, 129, 0.08));
+        color: #a7f3d0;
         font-size: 0.78rem;
-        font-weight: 700;
-        margin-top: 0.8rem;
+        font-weight: 750;
+        letter-spacing: 0.025em;
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.08);
     }
 
     .live-dot {
+        flex: 0 0 8px;
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #22c55e;
-        box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+        background: #34d399;
+        animation: live-pulse 2s ease-out infinite;
     }
 
     /* ---------- Navigation ---------- */
@@ -132,6 +183,14 @@ st.markdown(
         border-radius: 16px;
         background: rgba(15, 23, 42, 0.70);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        animation: enter-soft 480ms ease;
+    }
+
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        border-color: rgba(129, 140, 248, 0.35);
+        box-shadow: 0 16px 38px rgba(0, 0, 0, 0.20);
     }
 
     div[data-testid="stMetricLabel"] {
@@ -146,10 +205,11 @@ st.markdown(
 
     .section-card {
         padding: 1rem 1.1rem;
-        border: 1px solid rgba(148, 163, 184, 0.13);
+        border: 1px solid rgba(148, 163, 184, 0.16);
         border-radius: 16px;
-        background: rgba(15, 23, 42, 0.55);
+        background: linear-gradient(145deg, rgba(18, 27, 48, 0.86), rgba(15, 23, 42, 0.62));
         margin-bottom: 1rem;
+        animation: enter-soft 460ms ease both;
     }
 
     .section-kicker {
@@ -174,10 +234,58 @@ st.markdown(
 
     /* ---------- Tables ---------- */
 
+    [data-testid="stVegaLiteChart"],
+    [data-testid="stArrowVegaLiteChart"] {
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 16px;
+        background: rgba(12, 18, 33, 0.72);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+        animation: enter-soft 500ms ease both;
+    }
+
     [data-testid="stDataFrame"] {
-        border: 1px solid rgba(148, 163, 184, 0.12);
+        border: 1px solid rgba(148, 163, 184, 0.14);
         border-radius: 14px;
         overflow: hidden;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+    }
+
+    :focus-visible {
+        outline: 2px solid rgba(129, 140, 248, 0.9);
+        outline-offset: 3px;
+    }
+
+    @media (max-width: 640px) {
+        .hero {
+            padding: 1.55rem 1rem 1.35rem;
+        }
+
+        .hero-mark {
+            width: 44px;
+            height: 44px;
+        }
+
+        .hero-subtitle {
+            font-size: 0.92rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .hero,
+        .hero-mark,
+        .live-dot,
+        .section-card,
+        [data-testid="stMetric"],
+        [data-testid="stVegaLiteChart"],
+        [data-testid="stArrowVegaLiteChart"] {
+            animation: none !important;
+        }
+
+        div.stButton > button,
+        [data-testid="stMetric"] {
+            transition: none !important;
+        }
     }
 
     /* ---------- Status / footer ---------- */
@@ -222,14 +330,28 @@ def change_section(section):
 st.markdown(
     """
     <div class="hero">
-        <div class="hero-title">📊 Online Retail Intelligence</div>
-        <div class="hero-subtitle">
-            Historical Online Retail II sales replayed through Kafka for
-            product, country, anomaly and demand analysis.
-        </div>
-        <div class="live-pill">
+        <svg class="hero-mark" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+                <linearGradient id="hero-chart-gradient" x1="10" y1="46" x2="46" y2="10" gradientUnits="userSpaceOnUse">
+                    <stop offset="0" stop-color="#38bdf8"/>
+                    <stop offset="1" stop-color="#a78bfa"/>
+                </linearGradient>
+            </defs>
+            <rect x="2.5" y="2.5" width="51" height="51" rx="16" fill="#111b33" stroke="#354466"/>
+            <path d="M13 42.5H43" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="14" y="30" width="6.5" height="12.5" rx="2.2" fill="#38bdf8"/>
+            <rect x="24.8" y="23" width="6.5" height="19.5" rx="2.2" fill="url(#hero-chart-gradient)"/>
+            <rect x="35.5" y="15" width="6.5" height="27.5" rx="2.2" fill="#a78bfa"/>
+            <path d="m13.5 27.5 9-6 8 2 12-11" fill="none" stroke="#dbeafe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="42.5" cy="12.5" r="2.4" fill="#dbeafe"/>
+        </svg>
+        <h1 class="hero-title">Online Retail Intelligence</h1>
+        <p class="hero-subtitle">
+            Historical Online Retail Sales replayed through Kafka for product, country, anomaly and demand analysis.
+        </p>
+        <div class="live-pill" role="status">
             <span class="live-dot"></span>
-            HISTORICAL REPLAY • Refresh the page to update
+            LIVE STREAMING • Refresh the page to update
         </div>
     </div>
     """,
@@ -576,8 +698,6 @@ if st.session_state.active_section == "Products":
         stores = []
 
     if stores:
-        st.subheader("Country Performance")
-
         sorted_stores = sorted(
             stores,
             key=lambda item: float(item.get("total_quantity", 0) or 0),
@@ -599,6 +719,29 @@ if st.session_state.active_section == "Products":
                 }
             )
 
+        top_country_chart_rows = [
+            {
+                "Country": row["Country"],
+                "Units Sold": row["Units Sold"],
+            }
+            for row in country_rows[:15]
+        ]
+
+        st.subheader("Top 15 Countries by Units Sold")
+        if top_country_chart_rows:
+            st.bar_chart(
+                pd.DataFrame(top_country_chart_rows),
+                x="Country",
+                y="Units Sold",
+                horizontal=True,
+                sort="-Units Sold",
+                height=560,
+                alt="Top 15 countries ranked by units sold",
+            )
+        else:
+            st.info("No country sales are available to compare.")
+
+        st.subheader("Country Performance")
         st.dataframe(
             country_rows,
             hide_index=True,
