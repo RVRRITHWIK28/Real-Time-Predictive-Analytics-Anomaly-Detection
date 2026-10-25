@@ -157,7 +157,7 @@ def get_daily_analytics():
             {
                 "$match": {
                     "analytics_date": {
-                        "$regex": r"^\\d{4}-\\d{2}-\\d{2}$"
+                        "$regex": r"^\d{4}-\d{2}-\d{2}$"
                     }
                 }
             },
