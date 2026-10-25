@@ -155,6 +155,12 @@ def iter_online_retail_sales(
                                 continue
 
                             quantity = int(quantity_decimal)
+<<<<<<< HEAD
+=======
+                            # Preserve the source precision. Rounding each line
+                            # can turn a valid fractional-penny sale into 0.00,
+                            # which the positive-revenue event schema rejects.
+>>>>>>> 7dcad49 (Update professional dashboard)
                             revenue = quantity_decimal * unit_price_decimal
                             country = _text(row[positions["country"]]) or "Unknown"
                             customer = _text(row[positions["customer id"]]) or None
