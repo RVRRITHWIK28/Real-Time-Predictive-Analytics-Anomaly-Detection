@@ -403,7 +403,7 @@ with kpi4:
 
 st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
-kpi5, kpi6, kpi7 = st.columns(3)
+kpi5, kpi6, kpi7, kpi8, kpi9 = st.columns(5)
 
 with kpi5:
     st.metric(
@@ -418,6 +418,18 @@ with kpi6:
     )
 
 with kpi7:
+    st.metric(
+        "Hourly Revenue Anomalies",
+        f"{summary.get('hourly_revenue_anomalies', 0):,}",
+    )
+
+with kpi8:
+    st.metric(
+        "Daily Revenue Anomalies",
+        f"{summary.get('daily_revenue_anomalies', 0):,}",
+    )
+
+with kpi9:
     st.metric(
         "Revenue Anomalies",
         f"{summary.get('total_anomalies', 0):,}",
@@ -655,9 +667,14 @@ if st.session_state.active_section == "Products":
 if st.session_state.active_section == "Anomalies":
 
     show_section_heading(
-        "Anomaly Detection",
-        "Detected Revenue Anomalies",
-        "Review unusual revenue patterns only; quantity and product-volume flags are excluded.",
+        "Isolation Forest",
+        "Hourly & Daily Revenue Anomalies",
+        "Separate models flag unusual sale revenue at hourly and daily intervals.",
+    )
+    st.caption(
+        "Each row is a revenue bucket flagged by Isolation Forest. "
+        "The configured contamination rate controls how rare a point must be; "
+        "alerts are review signals, not confirmed incidents."
     )
 
     try:
@@ -665,70 +682,53 @@ if st.session_state.active_section == "Anomalies":
             "/anomalies/",
             params={
                 "is_anomaly": True,
-                "limit": 20,
+                "limit": 100,
             },
         ).get("anomalies", [])
-
     except requests.exceptions.RequestException:
-        st.error("Could not load anomaly data.")
+        st.error("Could not load revenue anomaly data.")
         anomalies = []
 
+    hourly_count = int(summary.get("hourly_revenue_anomalies", 0))
+    daily_count = int(summary.get("daily_revenue_anomalies", 0))
+    total_count = int(summary.get("total_anomalies", 0))
+
+    a1, a2, a3 = st.columns(3)
+    with a1:
+        st.metric("Hourly Revenue Alerts", hourly_count)
+    with a2:
+        st.metric("Daily Revenue Alerts", daily_count)
+    with a3:
+        st.metric("Total Revenue Alerts", total_count)
+
     if anomalies:
-
-        high_count = sum(
-            1
+        st.subheader("Recent Revenue Alerts")
+        anomaly_rows = [
+            {
+                "Time Scale": str(anomaly.get("time_scale", "")).title(),
+                "Timestamp": anomaly.get("timestamp"),
+                "Type": str(anomaly.get("anomaly_type", ""))
+                .replace("_", " ")
+                .title(),
+                "Revenue": format_currency(anomaly.get("current_value", 0)),
+                "Expected Revenue": format_currency(anomaly.get("baseline_value", 0)),
+                "IF Score": anomaly.get("anomaly_score"),
+                "Severity": anomaly.get("severity"),
+                "Reason": anomaly.get("reason"),
+                "Business Impact": anomaly.get("business_impact"),
+                "Recommendation": anomaly.get("recommendation"),
+            }
             for anomaly in anomalies
-            if str(anomaly.get("severity", "")).upper() == "HIGH"
-        )
-
-        medium_count = sum(
-            1
-            for anomaly in anomalies
-            if str(anomaly.get("severity", "")).upper() == "MEDIUM"
-        )
-
-        low_count = sum(
-            1
-            for anomaly in anomalies
-            if str(anomaly.get("severity", "")).upper() == "LOW"
-        )
-
-        a1, a2, a3 = st.columns(3)
-
-        with a1:
-            st.metric("High Severity", high_count)
-
-        with a2:
-            st.metric("Medium Severity", medium_count)
-
-        with a3:
-            st.metric("Low Severity", low_count)
-
-        st.subheader("Recent Revenue Anomalies")
-
-        anomaly_rows = []
-
-        for anomaly in anomalies:
-            anomaly_rows.append(
-                {
-                    "Timestamp": anomaly.get("timestamp"),
-                    "Type": country_language(anomaly.get("anomaly_type")),
-                    "Entity": anomaly.get("entity_id"),
-                    "Severity": anomaly.get("severity"),
-                    "Ratio": anomaly.get("ratio"),
-                    "Reason": anomaly.get("reason"),
-                    "Business Impact": country_language(anomaly.get("business_impact")),
-                    "Recommendation": country_language(anomaly.get("recommendation")),
-                }
-            )
-
+        ]
         st.dataframe(
             anomaly_rows,
             hide_index=True,
         )
-
     else:
-        st.success("No anomalies detected.")
+        st.info(
+            "No hourly or daily revenue outliers have been recorded yet. "
+            "The models need at least 14 days of hourly history and 60 days of daily history."
+        )
 
 
 # =========================================================

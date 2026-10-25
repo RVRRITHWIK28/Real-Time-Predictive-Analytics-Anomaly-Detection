@@ -1,8 +1,8 @@
-"""Backfill anomaly history from MongoDB, then detect future Kafka events."""
+"""Backfill hourly/daily revenue outliers, then score future completed buckets."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 import os
 import time
 
@@ -13,6 +13,12 @@ from src.database.mongodb import (
     get_anomalies_collection,
     get_database,
     get_transactions_collection,
+)
+from src.ml.revenue_isolation_forest import (
+    BUSINESS_TIMEZONE,
+    MODEL_VERSION,
+    build_regular_series,
+    as_utc,
 )
 from src.processing.unified_completed_anomaly_pipeline import (
     UnifiedCompletedAnomalyPipeline,
@@ -27,24 +33,11 @@ ANOMALY_CONSUMER_GROUP = os.getenv(
 EVENT_TIME_LATENESS = timedelta(
     seconds=int(os.getenv("ANOMALY_EVENT_TIME_LATENESS_SECONDS", "120"))
 )
-IDLE_FLUSH_SECONDS = float(
-    os.getenv("ANOMALY_IDLE_FLUSH_SECONDS", "30")
-)
-BACKFILL_LOG_EVERY = 50_000
-
-
-def _as_utc(value):
-    if isinstance(value, str):
-        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    if not isinstance(value, datetime):
-        raise ValueError(f"Unsupported transaction timestamp: {value!r}")
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+IDLE_FLUSH_SECONDS = float(os.getenv("ANOMALY_IDLE_FLUSH_SECONDS", "30"))
 
 
 def _minute_bucket(timestamp):
-    return timestamp.replace(second=0, microsecond=0)
+    return as_utc(timestamp).replace(second=0, microsecond=0)
 
 
 def _persist_events(collection, events):
@@ -75,7 +68,7 @@ def _persist_events(collection, events):
 def _persist_and_report(collection, events):
     inserted = _persist_events(collection, events)
     if inserted:
-        print(f"Stored {inserted:,} anomaly alert(s) in MongoDB.")
+        print(f"Stored {inserted:,} Isolation Forest revenue alert(s).")
     return inserted
 
 
@@ -90,6 +83,14 @@ def _ensure_anomaly_index(collection):
         unique=True,
         name="unique_anomaly_event",
     )
+    collection.create_index(
+        [
+            ("model_version", 1),
+            ("is_anomaly", 1),
+            ("time_scale", 1),
+        ],
+        name="anomaly_model_scale_lookup",
+    )
 
 
 def backfill_from_mongodb(
@@ -97,10 +98,10 @@ def backfill_from_mongodb(
     anomalies_collection,
     pipeline,
 ):
-    """Replay MongoDB transactions in event-time order to seed and persist alerts."""
+    """Aggregate full transaction history into London-time hours and days."""
     total_transactions = transactions_collection.count_documents({})
     print(
-        "Starting historical anomaly backfill from MongoDB "
+        "Starting hourly/daily revenue backfill from MongoDB "
         f"({total_transactions:,} stored transactions)."
     )
 
@@ -128,13 +129,47 @@ def backfill_from_mongodb(
                 },
             }
         },
-        {"$sort": {"_anomaly_time": 1, "event_id": 1}},
         {
-            "$project": {
-                "_id": 0,
-                "event_id": 1,
-                "timestamp": "$_anomaly_time",
-                "revenue": 1,
+            "$facet": {
+                "hourly": [
+                    {
+                        "$group": {
+                            "_id": {
+                                "$dateTrunc": {
+                                    "date": "$_anomaly_time",
+                                    "unit": "hour",
+                                    "timezone": "Europe/London",
+                                }
+                            },
+                            "revenue": {"$sum": "$revenue"},
+                        }
+                    },
+                    {"$sort": {"_id": 1}},
+                ],
+                "daily": [
+                    {
+                        "$group": {
+                            "_id": {
+                                "$dateTrunc": {
+                                    "date": "$_anomaly_time",
+                                    "unit": "day",
+                                    "timezone": "Europe/London",
+                                }
+                            },
+                            "revenue": {"$sum": "$revenue"},
+                        }
+                    },
+                    {"$sort": {"_id": 1}},
+                ],
+                "range": [
+                    {
+                        "$group": {
+                            "_id": None,
+                            "first": {"$min": "$_anomaly_time"},
+                            "last": {"$max": "$_anomaly_time"},
+                        }
+                    }
+                ],
             }
         },
     ]
@@ -144,67 +179,48 @@ def backfill_from_mongodb(
         allowDiskUse=True,
         batchSize=5_000,
     )
-
-    processed_transactions = 0
-    processed_buckets = 0
-    inserted_anomalies = 0
-    current_bucket = None
-    bucket_transactions = []
-    latest_event_time = None
-
-    def flush_bucket():
-        nonlocal processed_buckets, inserted_anomalies
-        if current_bucket is None:
-            return
-        events = pipeline.process_bucket(
-            current_bucket,
-            bucket_transactions,
-        )
-        inserted_anomalies += _persist_events(anomalies_collection, events)
-        processed_buckets += 1
-
     try:
-        for row in cursor:
-            event_time = _as_utc(row["timestamp"])
-            bucket = _minute_bucket(event_time)
-            row["timestamp"] = event_time
-
-            if current_bucket is not None and bucket != current_bucket:
-                flush_bucket()
-                bucket_transactions = []
-
-            current_bucket = bucket
-            bucket_transactions.append(row)
-            latest_event_time = event_time
-            processed_transactions += 1
-
-            if processed_transactions % BACKFILL_LOG_EVERY == 0:
-                print(
-                    f"Backfilled {processed_transactions:,} transactions "
-                    f"across {processed_buckets:,} completed minutes."
-                )
-
-        flush_bucket()
+        aggregate_result = next(cursor, {})
     finally:
         cursor.close()
 
+    hourly_rows = build_regular_series(
+        aggregate_result.get("hourly", []),
+        "hourly",
+    )
+    daily_rows = build_regular_series(
+        aggregate_result.get("daily", []),
+        "daily",
+    )
+    events = pipeline.fit_historical(hourly_rows, daily_rows)
+    inserted = _persist_events(anomalies_collection, events)
+
+    bounds = aggregate_result.get("range", [])
+    latest_event_time = (
+        as_utc(bounds[0]["last"])
+        if bounds and bounds[0].get("last") is not None
+        else None
+    )
     latest_bucket = (
         _minute_bucket(latest_event_time)
         if latest_event_time is not None
         else None
     )
+
     print(
-        "Historical backfill complete | "
-        f"Transactions analyzed: {processed_transactions:,} | "
-        f"Minute buckets: {processed_buckets:,} | "
-        f"New alerts stored: {inserted_anomalies:,}"
+        "Hourly/daily model backfill complete | "
+        f"Transactions stored: {total_transactions:,} | "
+        f"Hourly buckets: {len(hourly_rows):,} | "
+        f"Daily buckets: {len(daily_rows):,} | "
+        f"New Isolation Forest alerts: {inserted:,} | "
+        f"Model: {MODEL_VERSION}"
     )
     return {
         "latest_event_time": latest_event_time,
         "latest_bucket": latest_bucket,
-        "processed_transactions": processed_transactions,
-        "processed_buckets": processed_buckets,
-        "inserted_anomalies": inserted_anomalies,
+        "processed_transactions": total_transactions,
+        "processed_buckets": len(hourly_rows) + len(daily_rows),
+        "inserted_anomalies": inserted,
     }
 
 
@@ -227,8 +243,8 @@ def _process_live_transaction(
     max_event_time,
 ):
     try:
-        event_time = _as_utc(transaction.get("timestamp"))
-        bucket = _minute_bucket(event_time)
+        event_time = as_utc(transaction.get("timestamp"))
+        minute = _minute_bucket(event_time)
     except (TypeError, ValueError):
         print(
             "Skipping transaction with invalid timestamp: "
@@ -236,38 +252,26 @@ def _process_live_transaction(
         )
         return latest_finalized_bucket, max_event_time
 
-    # The MongoDB backfill already analyzed every bucket through this point.
-    # Ignore Kafka's historical replay of those same records.
-    if backfill_cutoff_bucket is not None and bucket <= backfill_cutoff_bucket:
+    if backfill_cutoff_bucket is not None and minute <= backfill_cutoff_bucket:
         return latest_finalized_bucket, max_event_time
-
-    # Ignore records arriving after their event-time bucket has been finalized.
-    if latest_finalized_bucket is not None and bucket <= latest_finalized_bucket:
+    if latest_finalized_bucket is not None and minute <= latest_finalized_bucket:
         return latest_finalized_bucket, max_event_time
-
-    required_fields = ("revenue",)
-    if any(field not in transaction for field in required_fields):
-        print(
-            "Skipping incomplete transaction: "
-            f"{transaction.get('event_id', 'unknown')}"
-        )
+    if "revenue" not in transaction:
         return latest_finalized_bucket, max_event_time
 
     try:
         transaction["revenue"] = float(transaction["revenue"])
     except (TypeError, ValueError):
         print(
-            "Skipping transaction with invalid numeric values: "
+            "Skipping transaction with invalid revenue: "
             f"{transaction.get('event_id', 'unknown')}"
         )
         return latest_finalized_bucket, max_event_time
-
     if transaction["revenue"] <= 0:
         return latest_finalized_bucket, max_event_time
 
     transaction["timestamp"] = event_time
     pipeline.add_transaction(transaction)
-
     if max_event_time is None or event_time > max_event_time:
         max_event_time = event_time
 
@@ -292,7 +296,6 @@ def run_anomaly_consumer():
         anomalies = get_anomalies_collection(database)
         _ensure_anomaly_index(anomalies)
 
-        # Subscribe first so Kafka retains any events arriving during backfill.
         consumer = create_consumer(
             group_id=ANOMALY_CONSUMER_GROUP,
             auto_offset_reset="latest",
@@ -317,8 +320,9 @@ def run_anomaly_consumer():
         max_event_time = backfill["latest_event_time"]
 
         print(
-            "Anomaly consumer started | "
+            "Hourly/daily Isolation Forest consumer started | "
             f"Kafka group: {ANOMALY_CONSUMER_GROUP} | "
+            f"Business timezone: {BUSINESS_TIMEZONE.key} | "
             f"Backfilled through: {backfill_cutoff_bucket or 'no data'}"
         )
 
@@ -337,23 +341,19 @@ def run_anomaly_consumer():
 
             for message in messages:
                 transaction = message.value
-                latest_finalized_bucket, max_event_time = (
-                    _process_live_transaction(
-                        transaction,
-                        detector_pipeline,
-                        anomalies,
-                        backfill_cutoff_bucket,
-                        latest_finalized_bucket,
-                        max_event_time,
-                    )
+                latest_finalized_bucket, max_event_time = _process_live_transaction(
+                    transaction,
+                    detector_pipeline,
+                    anomalies,
+                    backfill_cutoff_bucket,
+                    latest_finalized_bucket,
+                    max_event_time,
                 )
                 processed_live += 1
                 last_message_at = time.monotonic()
 
                 if processed_live % 10_000 == 0:
-                    print(
-                        f"Consumed {processed_live:,} Kafka transactions."
-                    )
+                    print(f"Consumed {processed_live:,} Kafka transactions.")
 
             if messages:
                 consumer.commit()
@@ -361,8 +361,8 @@ def run_anomaly_consumer():
                 max_event_time is not None
                 and time.monotonic() - last_message_at >= IDLE_FLUSH_SECONDS
             ):
-                # Close the final non-empty minute after a quiet period.
-                flush_time = max_event_time + timedelta(minutes=1)
+                # Close final open hour/day after the historical replay goes quiet.
+                flush_time = max_event_time + timedelta(days=1)
                 events = detector_pipeline.process_completed_buckets(flush_time)
                 _persist_and_report(anomalies, events)
                 latest_finalized_bucket = _latest_processed_bucket(
@@ -378,6 +378,6 @@ def run_anomaly_consumer():
             consumer.close()
         mongo_client.close()
 
+
 if __name__ == "__main__":
     run_anomaly_consumer()
-
