@@ -1,10 +1,15 @@
+import json
+import os
+import time
+
 import pandas as pd
 import requests
 import streamlit as st
-import os
+from streamlit_autorefresh import st_autorefresh
 
 
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").strip().rstrip("/")
 
 
 st.set_page_config(
@@ -236,13 +241,48 @@ st.markdown(
 # =========================================================
 
 def api_get(endpoint, params=None):
-    response = requests.get(
-        f"{API_URL}{endpoint}",
-        params=params,
-        timeout=30,
+    cache_key = (
+        f"_api_last_success::{endpoint}::"
+        f"{json.dumps(params or {}, sort_keys=True, default=str)}"
     )
-    response.raise_for_status()
-    return response.json()
+    last_error = None
+
+    for attempt in range(3):
+        try:
+            response = requests.get(
+                f"{API_URL}{endpoint}",
+                params=params,
+                timeout=(3, 30),
+            )
+            response.raise_for_status()
+            data = response.json()
+            st.session_state[cache_key] = data
+            return data
+        except requests.exceptions.ConnectionError as error:
+            last_error = error
+            if attempt < 2:
+                time.sleep(0.25 * (2 ** attempt))
+        except requests.exceptions.Timeout as error:
+            last_error = error
+            break
+        except requests.exceptions.HTTPError as error:
+            status_code = error.response.status_code if error.response else 0
+            if status_code < 500:
+                raise
+            last_error = error
+            if attempt < 2:
+                time.sleep(0.25 * (2 ** attempt))
+
+    if cache_key in st.session_state:
+        st.session_state["_api_using_cached_data"] = True
+        return st.session_state[cache_key]
+
+    if last_error is not None:
+        raise last_error
+
+    raise requests.exceptions.ConnectionError(
+        f"Analytics API is unavailable at {API_URL}."
+    )
 
 
 def format_compact_number(value):
@@ -309,12 +349,14 @@ def show_section_heading(kicker, title, description):
 # FETCH SUMMARY
 # =========================================================
 
+st.session_state["_api_using_cached_data"] = False
+
 try:
     summary = api_get("/analytics/summary")
 except requests.exceptions.RequestException:
-    st.error(
-        "Could not connect to the FastAPI server. "
-        "Make sure FastAPI is running at http://127.0.0.1:8000."
+    st.info(
+        f"Analytics API at {API_URL} is temporarily unavailable. "
+        "The dashboard will try again automatically."
     )
     st.stop()
 
@@ -846,6 +888,12 @@ if st.session_state.active_section == "Predictions":
         st.info("No demand predictions available yet.")
 
 
+if st.session_state.get("_api_using_cached_data"):
+    st.caption(
+        "Showing the latest available data while the analytics API reconnects."
+    )
+
+
 # =========================================================
 # FOOTER
 # =========================================================
@@ -858,3 +906,4 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+

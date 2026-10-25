@@ -3,6 +3,7 @@ services:
   kafka:
     image: apache/kafka:4.1.1
     container_name: realtime-kafka
+    restart: unless-stopped
 
     ports:
       - "9092:9092"
@@ -36,6 +37,7 @@ services:
   mongodb:
     image: mongo:8.0
     container_name: realtime-mongodb
+    restart: unless-stopped
 
     ports:
       - "27017:27017"
@@ -59,6 +61,7 @@ services:
       dockerfile: Dockerfile
 
     container_name: realtime-api
+    restart: unless-stopped
 
     ports:
       - "8000:8000"
@@ -88,6 +91,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: realtime-transaction-consumer
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -128,6 +132,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: realtime-prediction-consumer
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -146,6 +151,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: realtime-dashboard
+    restart: unless-stopped
     ports:
       - "8501:8501"
     env_file:

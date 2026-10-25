@@ -1,8 +1,10 @@
+import os
+
 import pandas as pd
 import requests
 import streamlit as st
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").strip().rstrip("/")
 
 
 st.set_page_config(
@@ -103,10 +105,10 @@ def get_analytics_summary():
 try:
     summary = get_analytics_summary()
 
-except requests.exceptions.RequestException as error:
-    st.error(
-        "Could not connect to the FastAPI server. "
-        "Make sure FastAPI is running."
+except requests.exceptions.RequestException:
+    st.info(
+        f"Analytics API at {API_URL} is temporarily unavailable. "
+        "The dashboard will try again automatically."
     )
     st.stop()
 
@@ -592,3 +594,4 @@ if st.session_state.active_section == "Predictions":
     else:
 
         st.info("No demand predictions available.")
+
