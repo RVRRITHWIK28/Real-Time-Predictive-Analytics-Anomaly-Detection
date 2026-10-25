@@ -114,17 +114,17 @@ def get_anomalies(
         elif hour is not None:
             query["time_scale"] = "hourly"
 
-        date_parts = []
-        if year is not None:
-            date_parts.append({"$eq": [{"$year": "$bucket"}, year]})
-        if month is not None:
-            date_parts.append({"$eq": [{"$month": "$bucket"}, month]})
-        if day is not None:
-            date_parts.append({"$eq": [{"$dayOfMonth": "$bucket"}, day]})
-        if hour is not None:
-            date_parts.append({"$eq": [{"$hour": "$bucket"}, hour]})
-        if date_parts:
-            query["$expr"] = {"$and": date_parts}
+        if any(value is not None for value in (year, month, day, hour)):
+            # MongoDB stores these ISO 8601 bucket values as strings.
+            year_pattern = str(year) if year is not None else r"\d{4}"
+            month_pattern = f"{month:02d}" if month is not None else r"\d{2}"
+            day_pattern = f"{day:02d}" if day is not None else r"\d{2}"
+            bucket_pattern = (
+                f"^{year_pattern}-{month_pattern}-{day_pattern}"
+            )
+            if hour is not None:
+                bucket_pattern += f"T{hour:02d}:"
+            query["bucket"] = {"$regex": bucket_pattern}
 
         total_count = collection.count_documents(query)
         anomalies = list(
