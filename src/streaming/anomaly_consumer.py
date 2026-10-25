@@ -120,12 +120,8 @@ def backfill_from_mongodb(
         {
             "$match": {
                 "_anomaly_time": {"$ne": None},
-                "product_id": {"$exists": True, "$ne": None},
-                "store_id": {"$exists": True, "$ne": None},
                 "$expr": {
                     "$and": [
-                        {"$isNumber": "$quantity"},
-                        {"$gt": ["$quantity", 0]},
                         {"$isNumber": "$revenue"},
                         {"$gt": ["$revenue", 0]},
                     ]
@@ -138,9 +134,6 @@ def backfill_from_mongodb(
                 "_id": 0,
                 "event_id": 1,
                 "timestamp": "$_anomaly_time",
-                "product_id": 1,
-                "store_id": 1,
-                "quantity": 1,
                 "revenue": 1,
             }
         },
@@ -252,7 +245,7 @@ def _process_live_transaction(
     if latest_finalized_bucket is not None and bucket <= latest_finalized_bucket:
         return latest_finalized_bucket, max_event_time
 
-    required_fields = ("product_id", "store_id", "quantity", "revenue")
+    required_fields = ("revenue",)
     if any(field not in transaction for field in required_fields):
         print(
             "Skipping incomplete transaction: "
@@ -261,7 +254,6 @@ def _process_live_transaction(
         return latest_finalized_bucket, max_event_time
 
     try:
-        transaction["quantity"] = float(transaction["quantity"])
         transaction["revenue"] = float(transaction["revenue"])
     except (TypeError, ValueError):
         print(
@@ -270,7 +262,7 @@ def _process_live_transaction(
         )
         return latest_finalized_bucket, max_event_time
 
-    if transaction["quantity"] <= 0 or transaction["revenue"] <= 0:
+    if transaction["revenue"] <= 0:
         return latest_finalized_bucket, max_event_time
 
     transaction["timestamp"] = event_time

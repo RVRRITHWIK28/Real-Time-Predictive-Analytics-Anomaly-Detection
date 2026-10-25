@@ -166,7 +166,7 @@ with col2:
 
 with col3:
     st.metric(
-        "Detected Anomalies",
+        "Revenue Anomalies",
         summary["total_anomalies"],
     )
 
@@ -399,7 +399,7 @@ if st.session_state.active_section == "Products":
 
 if st.session_state.active_section == "Anomalies":
 
-    st.header("🚨 Recent Anomalies")
+    st.header("🚨 Recent Revenue Anomalies")
 
     try:
 

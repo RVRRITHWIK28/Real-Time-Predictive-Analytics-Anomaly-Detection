@@ -6,6 +6,8 @@ from src.database.mongodb import (
 )
 
 
+REVENUE_ANOMALY_TYPES = ("revenue_spike", "revenue_drop")
+
 router = APIRouter(
     prefix="/anomalies",
     tags=["Anomalies"]
@@ -25,6 +27,12 @@ def get_anomalies(
             detail="limit must be between 1 and 100"
         )
 
+    if anomaly_type is not None and anomaly_type not in REVENUE_ANOMALY_TYPES:
+        return {
+            "count": 0,
+            "anomalies": []
+        }
+
     client = None
 
     try:
@@ -35,13 +43,14 @@ def get_anomalies(
 
         collection = database["anomalies"]
 
-        query = {}
-
-        if anomaly_type:
-            query["anomaly_type"] = anomaly_type
-
-        if is_anomaly is not None:
-            query["is_anomaly"] = is_anomaly
+        query = {
+            "anomaly_type": (
+                anomaly_type
+                if anomaly_type is not None
+                else {"$in": list(REVENUE_ANOMALY_TYPES)}
+            ),
+            "is_anomaly": True if is_anomaly is None else is_anomaly,
+        }
 
         anomalies = list(
             collection.find(

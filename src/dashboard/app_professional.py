@@ -419,7 +419,7 @@ with kpi6:
 
 with kpi7:
     st.metric(
-        "Detected Anomalies",
+        "Revenue Anomalies",
         f"{summary.get('total_anomalies', 0):,}",
     )
 
@@ -656,8 +656,8 @@ if st.session_state.active_section == "Anomalies":
 
     show_section_heading(
         "Anomaly Detection",
-        "Detected Business Anomalies",
-        "Review unusual revenue and quantity patterns identified by the streaming analytics pipeline.",
+        "Detected Revenue Anomalies",
+        "Review unusual revenue patterns only; quantity and product-volume flags are excluded.",
     )
 
     try:
@@ -704,7 +704,7 @@ if st.session_state.active_section == "Anomalies":
         with a3:
             st.metric("Low Severity", low_count)
 
-        st.subheader("Recent Anomalies")
+        st.subheader("Recent Revenue Anomalies")
 
         anomaly_rows = []
 

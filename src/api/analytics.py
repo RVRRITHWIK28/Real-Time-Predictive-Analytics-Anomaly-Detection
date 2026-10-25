@@ -66,7 +66,12 @@ def get_analytics_summary():
             unique_countries = len(transactions.distinct("store_id"))
 
         total_anomalies = anomalies.count_documents(
-            {"is_anomaly": True}
+            {
+                "is_anomaly": True,
+                "anomaly_type": {
+                    "$in": ["revenue_spike", "revenue_drop"]
+                },
+            }
         )
 
         return {
