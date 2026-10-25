@@ -663,7 +663,9 @@ if st.session_state.active_section == "Products":
 
 # =========================================================
 # ANOMALIES
-# ===========================================if st.session_state.active_section == "Anomalies":
+# =========================================================
+
+if st.session_state.active_section == "Anomalies":
 
     show_section_heading(
         "Isolation Forest",
@@ -677,7 +679,9 @@ if st.session_state.active_section == "Products":
     )
 
     st.subheader("Filter anomalies by date and time")
-    st.caption("Choose a year, month, day, and UTC hour to locate matching revenue alerts.")
+    st.caption(
+        "Choose a year, month, day, and UTC hour to locate matching revenue alerts."
+    )
 
     if "anomaly_page" not in st.session_state:
         st.session_state["anomaly_page"] = 1
@@ -712,7 +716,9 @@ if st.session_state.active_section == "Products":
     if selected_month is None:
         day_options = ["All days"]
     else:
-        years_to_check = [2009, 2010, 2011] if selected_year == "All years" else [selected_year]
+        years_to_check = (
+            [2009, 2010, 2011] if selected_year == "All years" else [selected_year]
+        )
         latest_valid_day = max(
             calendar.monthrange(candidate_year, selected_month)[1]
             for candidate_year in years_to_check
@@ -746,7 +752,9 @@ if st.session_state.active_section == "Products":
         selected_hour = st.selectbox(
             "Hour (UTC)",
             [None, *range(24)],
-            format_func=lambda value: "All hours" if value is None else f"{value:02d}:00",
+            format_func=lambda value: (
+                "All hours" if value is None else f"{value:02d}:00"
+            ),
             disabled=selected_time_scale == "Daily",
             key=hour_key,
             on_change=reset_anomaly_page,
@@ -774,7 +782,10 @@ if st.session_state.active_section == "Products":
         )
         anomalies = anomaly_response.get("anomalies", [])
         total_count = int(
-            anomaly_response.get("total_count", anomaly_response.get("count", len(anomalies)))
+            anomaly_response.get(
+                "total_count",
+                anomaly_response.get("count", len(anomalies)),
+            )
         )
         total_pages = max(1, (total_count + 99) // 100)
 
@@ -787,7 +798,10 @@ if st.session_state.active_section == "Products":
             )
             anomalies = anomaly_response.get("anomalies", [])
             total_count = int(
-                anomaly_response.get("total_count", anomaly_response.get("count", len(anomalies)))
+                anomaly_response.get(
+                    "total_count",
+                    anomaly_response.get("count", len(anomalies)),
+                )
             )
             total_pages = max(1, (total_count + 99) // 100)
     except requests.exceptions.RequestException:
@@ -823,7 +837,9 @@ if st.session_state.active_section == "Products":
         )
 
     if anomaly_load_failed:
-        st.info("The matching alert list is unavailable right now. Please try again shortly.")
+        st.info(
+            "The matching alert list is unavailable right now. Please try again shortly."
+        )
     elif anomalies:
         st.subheader("Revenue Alerts")
         anomaly_rows = [
@@ -834,7 +850,9 @@ if st.session_state.active_section == "Products":
                 .replace("_", " ")
                 .title(),
                 "Revenue": format_currency(anomaly.get("current_value", 0)),
-                "Expected Revenue": format_currency(anomaly.get("baseline_value", 0)),
+                "Expected Revenue": format_currency(
+                    anomaly.get("baseline_value", 0)
+                ),
                 "IF Score": anomaly.get("anomaly_score"),
                 "Severity": anomaly.get("severity"),
                 "Reason": anomaly.get("reason"),
@@ -854,7 +872,10 @@ if st.session_state.active_section == "Products":
         or selected_time_scale != "All intervals"
         or selected_hour is not None
     ):
-        st.info("No revenue alerts match those date and time filters. Try widening your selection.")
+        st.info(
+            "No revenue alerts match those date and time filters. "
+            "Try widening your selection."
+        )
     else:
         st.info(
             "No hourly or daily revenue outliers have been recorded yet. "
