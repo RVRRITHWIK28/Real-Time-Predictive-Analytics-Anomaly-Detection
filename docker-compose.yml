@@ -146,6 +146,27 @@ services:
       mongodb:
         condition: service_healthy
 
+  anomaly-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: realtime-anomaly-consumer
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MONGODB_URI: mongodb://mongodb:27017
+      ANOMALY_CONSUMER_GROUP: online-retail-anomaly-detection
+      ANOMALY_EVENT_TIME_LATENESS_SECONDS: "120"
+      ANOMALY_IDLE_FLUSH_SECONDS: "30"
+    command: >
+      python -m src.streaming.anomaly_consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
   dashboard:
     build:
       context: .
@@ -168,3 +189,4 @@ services:
       
 volumes:
   mongodb_data:
+
