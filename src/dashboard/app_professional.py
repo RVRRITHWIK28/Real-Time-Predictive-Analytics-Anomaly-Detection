@@ -559,7 +559,7 @@ def reset_anomaly_filters():
 
 
 def reset_forecast_filters():
-    for key in ("weekly_forecast_country", "weekly_forecast_search", "weekly_forecast_search_input", "weekly_forecast_horizon", "weekly_forecast_week_filter", "weekly_forecast_stock_code", "weekly_forecast_result", "weekly_forecast_request", "weekly_forecast_generated_at"):
+    for key in ("weekly_forecast_country", "weekly_forecast_search", "weekly_forecast_search_input", "weekly_forecast_target", "weekly_forecast_horizon", "weekly_forecast_week_filter", "weekly_forecast_stock_code", "weekly_forecast_result", "weekly_forecast_request", "weekly_forecast_generated_at"):
         st.session_state.pop(key, None)
 
 
@@ -1594,18 +1594,17 @@ if st.session_state.active_section == "Predictions":
 
     show_section_heading(
         "Predictive Analytics",
-        "Weekly StockCode Demand Forecast",
-        "Estimate how many units of a selected StockCode a country may need in each upcoming dataset week.",
+        "Weekly Product Demand & Revenue Forecast",
+        "Forecast units or sales revenue for a selected StockCode and country, one week at a time, for up to 13 weeks.",
     )
     st.button(
         "Reset forecast filters",
         key="reset_forecast_filter_button",
         on_click=reset_forecast_filters,
     )
-    st.warning(
-        "Online Retail II contains historical transactions from 2009–2011. "
-        "Forecast dates begin after the selected product's latest sales week in "
-        "that dataset, so they are historical projections rather than dates after today."
+    st.caption(
+        "The forecast follows the selected product's final sales week in Online Retail II (2009–2011). "
+        "Revenue is positive-sale gross revenue in GBP; cancellations and returns are excluded."
     )
 
     if "weekly_forecast_countries" not in st.session_state:
@@ -1619,7 +1618,7 @@ if st.session_state.active_section == "Predictions":
     country_options = st.session_state.get("weekly_forecast_countries", [])
 
     if country_options:
-        filter_columns = st.columns([1, 1.4, 1])
+        filter_columns = st.columns([0.9, 1.35, 1.0, 0.85], gap="medium")
         with filter_columns[0]:
             selected_country = st.selectbox(
                 "Country",
@@ -1632,24 +1631,37 @@ if st.session_state.active_section == "Predictions":
             st.session_state["weekly_forecast_search_input"] = ""
             st.session_state["weekly_forecast_stock_options_key"] = None
             st.session_state["weekly_forecast_last_country"] = selected_country
+
         with filter_columns[1]:
-            with st.form("weekly_stock_code_search_form"):
+            with st.form("weekly_stock_code_search_form", border=False):
                 search_input = st.text_input(
                     "Search StockCode or description",
                     key="weekly_forecast_search_input",
                     placeholder="Type a StockCode or product description",
                 )
                 apply_search = st.form_submit_button("Find StockCodes")
+
         if apply_search:
             st.session_state["weekly_forecast_search"] = search_input.strip()
         stock_code_search = st.session_state.get("weekly_forecast_search", "")
+
         with filter_columns[2]:
+            selected_target = st.segmented_control(
+                "Forecast target",
+                ["Revenue (£)", "Units"],
+                default="Revenue (£)",
+                key="weekly_forecast_target",
+                help="Revenue forecasts weekly positive-sale gross sales in GBP; units forecasts product quantity.",
+            )
+        selected_target = selected_target or "Revenue (£)"
+
+        with filter_columns[3]:
             horizon_weeks = st.slider(
                 "Forecast horizon (weeks)",
                 min_value=1,
                 max_value=13,
                 value=13,
-                help="Choose 1–13 weekly forecasts (up to approximately 3 months).",
+                help="Choose up to 13 weekly estimates (approximately three months).",
                 key="weekly_forecast_horizon",
             )
 
@@ -1670,6 +1682,7 @@ if st.session_state.active_section == "Predictions":
                 st.session_state["weekly_forecast_stock_options_key"] = options_key
             except requests.exceptions.RequestException:
                 st.error("Could not load StockCodes for the selected country.")
+
         stock_codes = st.session_state.get("weekly_forecast_stock_options", [])
         if st.session_state.get("weekly_forecast_stock_options_key") != options_key:
             stock_codes = []
@@ -1681,10 +1694,7 @@ if st.session_state.active_section == "Predictions":
                 if item.get("stock_code")
             }
             code_options = list(stock_by_code)
-            if (
-                st.session_state.get("weekly_forecast_stock_code")
-                not in code_options
-            ):
+            if st.session_state.get("weekly_forecast_stock_code") not in code_options:
                 st.session_state["weekly_forecast_stock_code"] = code_options[0]
             selected_stock_code = st.selectbox(
                 "StockCode",
@@ -1705,21 +1715,33 @@ if st.session_state.active_section == "Predictions":
                 "country": selected_country,
                 "stock_code": selected_stock_code,
                 "weeks": horizon_weeks,
+                "target": selected_target,
             }
             if st.button("Generate weekly forecast", type="primary"):
                 st.session_state.pop("weekly_forecast_result", None)
                 st.session_state.pop("weekly_forecast_request", None)
+                endpoint = (
+                    "/predictions/weekly-revenue-forecast"
+                    if selected_target == "Revenue (£)"
+                    else "/predictions/weekly-forecast"
+                )
                 try:
                     with st.spinner(
-                        "Training the Random Forest model on this product's weekly sales..."
+                        f"Training the Random Forest on weekly {selected_target.lower()} history..."
                     ):
                         forecast_response = api_get(
-                            "/predictions/weekly-forecast",
-                            params=request_key,
+                            endpoint,
+                            params={
+                                "country": selected_country,
+                                "stock_code": selected_stock_code,
+                                "weeks": horizon_weeks,
+                            },
                         )
                     st.session_state["weekly_forecast_result"] = forecast_response
                     st.session_state["weekly_forecast_request"] = request_key
-                    st.session_state["weekly_forecast_generated_at"] = datetime.now(timezone.utc).strftime("%d %b %Y, %H:%M UTC")
+                    st.session_state["weekly_forecast_generated_at"] = datetime.now(
+                        timezone.utc
+                    ).strftime("%d %b %Y, %H:%M UTC")
 
                 except requests.exceptions.HTTPError as error:
                     detail = "Forecast could not be generated."
@@ -1734,48 +1756,30 @@ if st.session_state.active_section == "Predictions":
             forecast_result = st.session_state.get("weekly_forecast_result")
             forecast_request = st.session_state.get("weekly_forecast_request")
             if forecast_result and forecast_request == request_key:
-                st.success(
-                    f"Random Forest forecast ready for {selected_stock_code} in {selected_country}."
+                is_revenue = selected_target == "Revenue (£)"
+                forecast_value_key = (
+                    "predicted_revenue_gbp" if is_revenue else "predicted_units"
                 )
+                history_value_key = "revenue_gbp" if is_revenue else "units"
+                value_label = "Revenue (£)" if is_revenue else "Units"
+
                 st.success(
-                    f"Random Forest forecast ready for {selected_stock_code} in {selected_country}."
+                    f"Weekly {selected_target.lower()} forecast ready for "
+                    f"{selected_stock_code} in {selected_country}."
                 )
                 st.caption(
                     f"Model: Random Forest Regressor · 200 trees · recursive weekly estimates · "
                     f"generated {st.session_state.get('weekly_forecast_generated_at', 'time unavailable')}"
                 )
-
-                latest_week = forecast_result.get("last_observed_week", "unknown")
                 st.caption(
-                    f"Weekly history: {forecast_result.get('history_start_week')} "
-                    f"through {latest_week}. The first forecast week starts immediately "
-                    "after that final historical week."
+                    f"History: {forecast_result.get('history_start_week')} through "
+                    f"{forecast_result.get('last_observed_week', 'unknown')}. "
+                    "Forecast Week 1 starts after the last observed week."
                 )
 
                 forecast_rows = forecast_result.get("forecast", [])
-                total_units = sum(
-                    int(item.get("predicted_units", 0))
-                    for item in forecast_rows
-                )
-                metric_columns = st.columns(3)
-                with metric_columns[0]:
-                    st.metric("🔮 Forecast Units", f"{total_units:,}")
-                with metric_columns[1]:
-                    st.metric("🗓️ Forecast Weeks", len(forecast_rows))
-                with metric_columns[2]:
-                    st.metric(
-                        "📈 Historical Weeks",
-                        f"{forecast_result.get('history_weeks', 0):,}",
-                    )
-
-                        f"{forecast_result.get('history_weeks', 0):,}",
-                    )
-
                 week_options = ["All weeks", *range(1, len(forecast_rows) + 1)]
-                if (
-                    st.session_state.get("weekly_forecast_week_filter")
-                    not in week_options
-                ):
+                if st.session_state.get("weekly_forecast_week_filter") not in week_options:
                     st.session_state["weekly_forecast_week_filter"] = "All weeks"
                 selected_week = st.selectbox(
                     "Filter by forecast week",
@@ -1788,24 +1792,61 @@ if st.session_state.active_section == "Predictions":
                 visible_rows = forecast_rows
                 if selected_week != "All weeks":
                     visible_rows = [
-                        item
-                        for item in forecast_rows
+                        item for item in forecast_rows
                         if item.get("week_number") == selected_week
                     ]
 
-                table_rows = [
-                    {
-                        "Forecast Week": f"Week {item['week_number']}",
-                        "Week Starts": item.get("week_start"),
-                        "Week Ends": item.get("week_end"),
-                        "Predicted Units Required": item.get("predicted_units", 0),
-                    }
+                selected_total = sum(
+                    float(item.get(forecast_value_key, 0))
                     for item in visible_rows
-                ]
+                )
+                metric_columns = st.columns(3)
+                with metric_columns[0]:
+                    value_text = (
+                        f"£{selected_total:,.2f}" if is_revenue
+                        else f"{round(selected_total):,}"
+                    )
+                    st.metric(
+                        "Forecast revenue" if is_revenue else "Forecast units",
+                        value_text,
+                    )
+                with metric_columns[1]:
+                    st.metric("Forecast weeks shown", len(visible_rows))
+                with metric_columns[2]:
+                    st.metric(
+                        "Historical weeks",
+                        f"{forecast_result.get('history_weeks', 0):,}",
+                    )
+
+                if is_revenue:
+                    table_rows = [
+                        {
+                            "Forecast Week": f"Week {item['week_number']}",
+                            "Week Starts": item.get("week_start"),
+                            "Week Ends": item.get("week_end"),
+                            "Predicted Revenue (£)": round(
+                                float(item.get(forecast_value_key, 0)), 2
+                            ),
+                        }
+                        for item in visible_rows
+                    ]
+                else:
+                    table_rows = [
+                        {
+                            "Forecast Week": f"Week {item['week_number']}",
+                            "Week Starts": item.get("week_start"),
+                            "Week Ends": item.get("week_end"),
+                            "Predicted Units Required": int(
+                                item.get(forecast_value_key, 0)
+                            ),
+                        }
+                        for item in visible_rows
+                    ]
+
                 st.dataframe(
                     pd.DataFrame(table_rows),
                     hide_index=True,
-                    use_container_width=True,
+                    width="stretch",
                 )
                 if visible_rows:
                     forecast_fig = go.Figure()
@@ -1814,38 +1855,51 @@ if st.session_state.active_section == "Predictions":
                         history_frame = pd.DataFrame(history_rows)
                         forecast_fig.add_scatter(
                             x=history_frame["week_start"],
-                            y=history_frame["units"],
+                            y=history_frame[history_value_key],
                             mode="lines",
-                            name="Observed units",
+                            name=f"Observed {value_label.lower()}",
                             line={"color": "#38bdf8", "width": 2.2},
-                            hovertemplate="%{x}<br>Observed units: %{y:,.0f}<extra></extra>",
+                            hovertemplate=(
+                                "%{x}<br>Observed revenue: £%{y:,.2f}<extra></extra>"
+                                if is_revenue
+                                else "%{x}<br>Observed units: %{y:,.0f}<extra></extra>"
+                            ),
                         )
-                    if visible_rows:
-                        forecast_fig.add_scatter(
-                            x=[item.get("week_start") for item in visible_rows],
-                            y=[item.get("predicted_units", 0) for item in visible_rows],
-                            mode="lines+markers",
-                            name="Forecast units",
-                            line={"color": "#a78bfa", "width": 2.4, "dash": "dash"},
-                            marker={"size": 8, "color": "#a78bfa"},
-                            hovertemplate="%{x}<br>Forecast units: %{y:,.0f}<extra></extra>",
-                        )
+                    forecast_fig.add_scatter(
+                        x=[item.get("week_start") for item in visible_rows],
+                        y=[float(item.get(forecast_value_key, 0)) for item in visible_rows],
+                        mode="lines+markers",
+                        name=f"Forecast {value_label.lower()}",
+                        line={"color": "#a78bfa", "width": 2.4, "dash": "dash"},
+                        marker={"size": 8, "color": "#a78bfa"},
+                        hovertemplate=(
+                            "%{x}<br>Forecast revenue: £%{y:,.2f}<extra></extra>"
+                            if is_revenue
+                            else "%{x}<br>Forecast units: %{y:,.0f}<extra></extra>"
+                        ),
+                    )
                     forecast_fig.update_xaxes(title="Week starting")
-                    forecast_fig.update_yaxes(title="Units", tickformat=",.0f")
+                    forecast_fig.update_yaxes(
+                        title="Revenue (£)" if is_revenue else "Units",
+                        tickformat="£,.0f" if is_revenue else ",.0f",
+                    )
                     show_plotly(forecast_fig, 420)
 
                 st.download_button(
                     "Download selected forecast rows",
                     data=pd.DataFrame(table_rows).to_csv(index=False).encode("utf-8"),
-                    file_name=f"weekly_forecast_{selected_stock_code}.csv",
+                    file_name=(
+                        f"weekly_revenue_forecast_{selected_stock_code}.csv"
+                        if is_revenue
+                        else f"weekly_units_forecast_{selected_stock_code}.csv"
+                    ),
                     mime="text/csv",
-                    key="download_weekly_forecast",
+                    key=f"download_weekly_forecast_{'revenue' if is_revenue else 'units'}",
                 )
-
                 st.caption(
-                    "The model is trained separately for the selected country and "
-                    "StockCode. Future weeks are predicted recursively, so each "
-                    "later estimate also uses earlier forecast estimates."
+                    "Both targets use the same country and StockCode filters. The selected "
+                    "forecast-week filter updates the table, chart, download, and displayed total. "
+                    "Revenue is direct weekly transaction revenue, not units multiplied by an assumed price."
                 )
         elif stock_code_search.strip():
             st.info(
@@ -1860,13 +1914,6 @@ if st.session_state.active_section == "Predictions":
         st.info("No countries with positive historical sales are available.")
 
 
-if st.session_state.get("_api_using_cached_data"):
-    st.caption(
-        "Showing the latest available data while the analytics API reconnects."
-    )
-
-
-# =========================================================
 # FOOTER
 # =========================================================
 

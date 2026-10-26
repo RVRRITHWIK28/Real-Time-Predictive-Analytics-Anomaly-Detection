@@ -44,6 +44,14 @@ The Random Forest's MAE is 6.82% higher than the last-week baseline (worse) and 
 
 There are 1,437 predictions at each horizon (479 pairs × 3 folds). The complete metrics, including RMSE, WAPE, and both baseline comparisons for each horizon, are in forecast_metrics_by_horizon.csv. The evaluation script also generates row-level forecasts and actuals in forecast_backtest_predictions.csv when run locally; that large intermediate file is not included in this pull request.
 
+## Weekly gross-revenue forecasting
+
+The dashboard supports a second forecast target alongside weekly units: weekly gross sales revenue for a selected country and StockCode. The API aggregates the stored revenue field into Monday-to-Sunday GBP totals using Europe/London business time. Only positive-quantity, positive-revenue sale lines are included; cancellations and returns/adjustments are excluded. Missing weeks between the first and last sale are zero-filled.
+
+The Random Forest is fitted separately for the selected country–StockCode series, using weekly revenue lags (1, 2, 4, and 8 weeks), 4- and 8-week rolling means, annual week-of-year features, and the same 200-tree configuration as the unit model. It recursively forecasts up to 13 weeks. Country, StockCode, horizon, and forecast-week filters are shared by both dashboard targets; the week filter also updates the table, chart, download, and displayed total.
+
+The metrics in this report evaluate unit demand only. They must not be used as evidence of revenue-forecast accuracy. The revenue target is a project extension and remains exploratory until a separate rolling-origin revenue backtest reports GBP MAE/RMSE/WAPE against last-week and 52-week seasonal-naive baselines. Dataset weeks are historical projections after each pair's last recorded week in 2011, not current-date business forecasts.
+
 ## Revenue anomaly evaluation
 
 The project runs separate Isolation Forest detectors on hourly and daily revenue buckets with time/calendar features and log revenue, using chronological historical replay and periodic refits. The contamination parameter is 1%; that is a model setting, not measured incident prevalence.

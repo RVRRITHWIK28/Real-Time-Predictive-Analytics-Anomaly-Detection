@@ -497,6 +497,12 @@ Dashboard
 ```
 -Predictions are generated only when the relevant event-time period has completed.
 
+### Weekly revenue forecast
+
+The Predictions dashboard now lets the user switch between weekly unit demand and weekly gross sales revenue. Both targets use the same filters: country, StockCode, a 1–13 week horizon, and an individual forecast-week filter. The revenue target is aggregated directly from positive-quantity, positive-revenue sale lines in GBP, then modeled with a Random Forest using lag, rolling-average, and annual calendar features. Forecasts are recursive and begin after the selected pair's last observed week in the 2009–2011 source data. Cancellations and return/adjustment rows are excluded.
+
+The published rolling-origin metrics above evaluate unit demand only. They do not establish the accuracy of the new revenue target; treat revenue estimates as exploratory until a separate time-based backtest compares them with simple revenue baselines.
+
 ## 8. FastAPI Backend
 
 -FastAPI provides the REST API layer between MongoDB and the dashboard.
