@@ -11,6 +11,7 @@ from src.ml.weekly_demand_forecast import (
     InsufficientHistoryError,
     forecast_weekly_units,
 )
+from src.ml.weekly_revenue_forecast import forecast_weekly_revenue
 
 
 router = APIRouter(
@@ -247,6 +248,124 @@ def get_weekly_demand_forecast(
         raise HTTPException(
             status_code=503,
             detail="Could not build the weekly forecast",
+        )
+    finally:
+        if client is not None:
+            client.close()
+
+
+@router.get("/weekly-revenue-forecast")
+def get_weekly_revenue_forecast(
+    country: str,
+    stock_code: str,
+    weeks: int = Query(default=13, ge=1, le=13),
+):
+    """Forecast weekly positive-sale gross revenue in GBP for one country and StockCode."""
+    client = None
+    try:
+        client = create_mongo_client()
+        collection = get_database(client)["transactions"]
+        weekly_history = list(
+            collection.aggregate(
+                [
+                    {
+                        "$match": {
+                            "store_id": country,
+                            "product_id": stock_code,
+                            "quantity": {"$gt": 0},
+                            "revenue": {"$gt": 0},
+                        }
+                    },
+                    {
+                        "$set": {
+                            "_event_datetime": {
+                                "$convert": {
+                                    "input": "$timestamp",
+                                    "to": "date",
+                                    "onError": None,
+                                    "onNull": None,
+                                }
+                            }
+                        }
+                    },
+                    {"$match": {"_event_datetime": {"$ne": None}}},
+                    {
+                        "$set": {
+                            "_week_start": {
+                                "$dateTrunc": {
+                                    "date": "$_event_datetime",
+                                    "unit": "week",
+                                    "startOfWeek": "monday",
+                                    "timezone": "Europe/London",
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "$group": {
+                            "_id": "$_week_start",
+                            "revenue_gbp": {"$sum": "$revenue"},
+                            "sale_lines": {"$sum": 1},
+                            "description": {"$first": "$description"},
+                        }
+                    },
+                    {"$sort": {"_id": 1}},
+                    {
+                        "$project": {
+                            "_id": 0,
+                            "week_start": {
+                                "$dateToString": {
+                                    "date": "$_id",
+                                    "format": "%Y-%m-%d",
+                                    "timezone": "Europe/London",
+                                }
+                            },
+                            "revenue_gbp": 1,
+                            "sale_lines": 1,
+                            "description": 1,
+                        }
+                    },
+                ]
+            )
+        )
+        if not weekly_history:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "No positive-revenue sales were found for this Country and "
+                    "StockCode."
+                ),
+            )
+
+        history = [
+            {
+                "week_start": date.fromisoformat(row["week_start"]),
+                "revenue_gbp": row["revenue_gbp"],
+            }
+            for row in weekly_history
+        ]
+        try:
+            forecast = forecast_weekly_revenue(history, weeks)
+        except InsufficientHistoryError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+        return {
+            "country": country,
+            "stock_code": stock_code,
+            "description": weekly_history[-1].get("description"),
+            "model": "RandomForestRegressor",
+            "model_version": "weekly_revenue_random_forest_v1",
+            "forecast_target": "positive_sale_gross_revenue",
+            "currency": "GBP",
+            "horizon_weeks": weeks,
+            **forecast,
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Could not build the weekly revenue forecast",
         )
     finally:
         if client is not None:
