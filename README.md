@@ -440,28 +440,27 @@ Sep 8 ───────── Sep 23       Sep 24 ───── Sep 30
 
 -The project also includes a simple lag-based baseline for comparison.
 
-Baseline
-```
-MAE  : 9.56
-RMSE : 12.74
-MAPE : 74.55%
-Random Forest
-MAE  : 7.41
-RMSE : 9.89
-MAPE : 57.95%
-```
+Online Retail II rolling backtest (active dataset)
+---------------------------------------------------
+The following results evaluate the Country + StockCode weekly Random Forest used by the Online Retail II pipeline. The rolling-origin backtest predicts 13 weeks at a time using three non-overlapping chronological test windows. It compares the model with a last-week-naive baseline and a 52-week seasonal-naive baseline.
 
-The model is persisted using:
+| Model | Forecasts | MAE (units) | RMSE (units) | WAPE |
+|---|---:|---:|---:|---:|
+| Random Forest | 18,681 | 67.93 | 185.59 | 87.67% |
+| Naive (repeat last week) | 18,681 | 63.59 | 169.26 | 82.07% |
+| Seasonal naive (repeat 52 weeks ago) | 18,681 | 84.52 | 282.18 | 109.08% |
 
-```
-models/
-├── demand_model.joblib
-└── demand_model_metadata.json
-```
+The Random Forest improves MAE by 19.62% versus the seasonal-naive baseline, but its MAE is 6.82% worse than repeating the previous week. The model therefore does **not** outperform the strongest simple baseline overall on this dataset. Results are pooled across eligible series and horizons; horizon-specific metrics are in [forecast_metrics_by_horizon.csv](reports/academic_validation/forecast_metrics_by_horizon.csv).
 
--The reported metrics are based on the project's current synthetic dataset and evaluation split.
+Eligibility requires both at least 91 calendar weeks of history and at least 91 distinct weeks with recorded sales for that country and StockCode. Evaluation zero-fills missing weeks between a series' first and last sale. The dataset has no inventory or product-availability history, so a zero may mean no demand or unavailable stock. Cancellations, returns/adjustments, and rows with nonpositive unit prices are excluded from this sales-only pipeline. The eligible long-history cohort is not representative of all products.
 
+Run the reproducible evaluation from the repository root:
 
+python scripts/academic_validation.py --archive data/raw/online+retail+ii.zip
+
+See [the validation report](reports/academic_validation/ACADEMIC_VALIDATION.md) for the fold design, per-horizon errors, anomaly checks, limitations, and dataset citation.
+
+Dataset citation: Chen, D. (2012). *Online Retail II* [Dataset]. UCI Machine Learning Repository. [https://doi.org/10.24432/C5CG6D](https://doi.org/10.24432/C5CG6D).
 🔮 Real-Time ML Prediction
 
 The trained model is integrated into the streaming system.

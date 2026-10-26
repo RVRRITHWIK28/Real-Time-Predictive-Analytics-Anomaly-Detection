@@ -1,0 +1,67 @@
+{
+  "dataset": "Online Retail II",
+  "dataset_period": "2009-12-01 through 2011-12-09",
+  "dataset_citation": "Chen, D. (2012). Online Retail II. UCI Machine Learning Repository. https://doi.org/10.24432/C5CG6D",
+  "source_row_counts": {
+    "source_rows": 1067371,
+    "sale_events": 1041670,
+    "cancellations_skipped": 19494,
+    "returns_or_adjustments_skipped": 3457,
+    "nonpositive_prices_skipped": 2750,
+    "invalid_rows_skipped": 0,
+    "blank_rows_skipped": 0
+  },
+  "forecast_evaluation": {
+    "eligible_series": 479,
+    "excluded_series": 27885,
+    "minimum_calendar_weeks": 91,
+    "minimum_weeks_with_sales": 91,
+    "rolling_origins_per_series": 3,
+    "forecast_horizon_weeks": 13,
+    "observations_per_model": 18681,
+    "metrics_file": "reports/academic_validation/forecast_metrics_by_horizon.csv",
+    "predictions_file": "reports/academic_validation/forecast_backtest_predictions.csv"
+  },
+  "anomaly_evaluation": {
+    "method": "chronological historical replay; score against past history; periodic refits",
+    "contamination": 0.01,
+    "hourly_flag_count": 198,
+    "daily_flag_count": 74,
+    "total_flag_count": 272,
+    "unlabeled_holdout": {
+      "hourly": {
+        "holdout_buckets": 5316,
+        "untouched_holdout_flag_rate_pct": 0.9217456734386756,
+        "interpretation": "unlabeled holdout flag rate, not a false-positive rate"
+      },
+      "daily": {
+        "holdout_buckets": 222,
+        "untouched_holdout_flag_rate_pct": 0.9009009009009009,
+        "interpretation": "unlabeled holdout flag rate, not a false-positive rate"
+      }
+    },
+    "review_sample_rows": 60,
+    "review_note": "Ratio evidence screen is descriptive, not a ground-truth label; review_label and review_notes remain blank.",
+    "injection_file": "reports/academic_validation/anomaly_injection_validation.csv",
+    "hourly_bucket_count": 17718,
+    "daily_bucket_count": 739,
+    "hourly_flag_rate_pct": 1.117507619370132,
+    "daily_flag_rate_pct": 10.013531799729364,
+    "review_sample_screen_counts": {
+      "near median: within 0.8x-1.25x": 9,
+      "strong deviation: >=2x or <=0.5x median": 39,
+      "moderate deviation: >=1.5x or <=0.67x median": 9,
+      "mild deviation: >=1.25x or <=0.8x median": 3
+    },
+    "review_sample_status": "Detailed local worksheet excluded from the pull request."
+  },
+  "limitations": [
+    "Positive sale lines only; cancellations and returns/adjustments are excluded.",
+    "Weekly zero-fill between first and last sale assumes product availability; inventory status is not observed.",
+    "Forecast results cover longer-history country/StockCode series, not short-history items.",
+    "The dataset ends in 2011; forecast dates are historical projections from the final observed week.",
+    "No labeled natural-anomaly ground truth exists; Isolation Forest totals are flags, not confirmed incidents.",
+    "Controlled shifts measure sensitivity to those perturbations, not precision on natural events.",
+    "StockCodes may include service/manual entries because the dataset has no clean merchandise category field."
+  ]
+}

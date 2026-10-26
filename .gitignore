@@ -12,3 +12,6 @@ data/processed/
 models/
 logs/
 .DS_Store
+
+# Keep transaction-derived anomaly review details local.
+reports/academic_validation/anomaly_review_sample.csv

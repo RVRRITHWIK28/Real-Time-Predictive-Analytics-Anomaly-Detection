@@ -114,7 +114,7 @@ def get_analytics_summary():
 
 
 @router.get("/daily")
-def get_daily_analytics():
+def get_daily_analytics(country: str | None = None, product_id: str | None = None):
 
     client = None
 
@@ -125,9 +125,24 @@ def get_daily_analytics():
 
         collection = database["transactions"]
 
+        transaction_match = {}
+        if country:
+            transaction_match["$or"] = [
+                {"country": country},
+                {"store_id": country},
+            ]
+        if product_id:
+            transaction_match["product_id"] = product_id
+
+        # Scope the source collection before date extraction so filters reduce
+        # the work required by the daily aggregation.
+        pipeline = []
+        if transaction_match:
+            pipeline.append({"$match": transaction_match})
+
         # Online Retail II events already carry this date, so prefer it over
         # parsing every timestamp while scanning the full transaction history.
-        pipeline = [
+        pipeline.extend([
             {
                 "$addFields": {
                     "analytics_date": {
@@ -192,7 +207,7 @@ def get_daily_analytics():
                     "_id": 1
                 }
             }
-        ]
+        ])
         daily_data = list(
             collection.aggregate(pipeline)
         )
