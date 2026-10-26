@@ -1,0 +1,5 @@
+time_scale,perturbation,known_injected_cases,detected_cases,detection_rate_pct,note
+hourly,5x spike,300,105,35.0,controlled synthetic perturbations on real holdout buckets; not natural-anomaly recall
+hourly,90% drop,300,1,0.33333333333333337,controlled synthetic perturbations on real holdout buckets; not natural-anomaly recall
+daily,5x spike,188,0,0.0,controlled synthetic perturbations on real holdout buckets; not natural-anomaly recall
+daily,90% drop,188,0,0.0,controlled synthetic perturbations on real holdout buckets; not natural-anomaly recall
