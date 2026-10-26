@@ -333,6 +333,51 @@ def country_language(value):
     )
 
 
+COUNTRY_MAP_CENTERS = {
+    "Australia": (-25.2744, 133.7751),
+    "Austria": (47.5162, 14.5501),
+    "Bahrain": (26.0667, 50.5577),
+    "Belgium": (50.5039, 4.4699),
+    "Bermuda": (32.3078, -64.7505),
+    "Brazil": (-14.2350, -51.9253),
+    "Canada": (56.1304, -106.3468),
+    "Channel Islands": (49.3723, -2.3644),
+    "Cyprus": (35.1264, 33.4299),
+    "Czech Republic": (49.8175, 15.4730),
+    "Denmark": (56.2639, 9.5018),
+    "EIRE": (53.1424, -7.6921),
+    "Finland": (61.9241, 25.7482),
+    "France": (46.2276, 2.2137),
+    "Germany": (51.1657, 10.4515),
+    "Greece": (39.0742, 21.8243),
+    "Hong Kong": (22.3193, 114.1694),
+    "Iceland": (64.9631, -19.0208),
+    "Israel": (31.0461, 34.8516),
+    "Italy": (41.8719, 12.5674),
+    "Japan": (36.2048, 138.2529),
+    "Korea": (36.5000, 127.9000),
+    "Lebanon": (33.8547, 35.8623),
+    "Lithuania": (55.1694, 23.8813),
+    "Malta": (35.9375, 14.3754),
+    "Netherlands": (52.1326, 5.2913),
+    "Nigeria": (9.0820, 8.6753),
+    "Norway": (60.4720, 8.4689),
+    "Poland": (51.9194, 19.1451),
+    "Portugal": (39.3999, -8.2245),
+    "RSA": (-30.5595, 22.9375),
+    "Saudi Arabia": (23.8859, 45.0792),
+    "Singapore": (1.3521, 103.8198),
+    "Spain": (40.4637, -3.7492),
+    "Sweden": (60.1282, 18.6435),
+    "Switzerland": (46.8182, 8.2275),
+    "Thailand": (15.8700, 100.9925),
+    "USA": (37.0902, -95.7129),
+    "United Arab Emirates": (23.4241, 53.8478),
+    "United Kingdom": (55.3781, -3.4360),
+    "West Indies": (17.5000, -72.5000),
+}
+
+
 def show_section_heading(kicker, title, description):
     st.markdown(
         f"""
@@ -560,7 +605,7 @@ if st.session_state.active_section == "Products":
     show_section_heading(
         "Products & Countries",
         "Retail Performance",
-        "Compare StockCode performance and country markets using the imported sales lines.",
+        "Explore country-level sales on a world map and compare the strongest markets.",
     )
 
     try:
@@ -575,93 +620,137 @@ if st.session_state.active_section == "Products":
         st.error("Could not load country analytics.")
         stores = []
 
-    if products:
+    if stores:
+        st.subheader("Country Performance")
 
+        sorted_stores = sorted(
+            stores,
+            key=lambda item: float(item.get("total_quantity", 0) or 0),
+            reverse=True,
+        )
+        country_rows = []
+        map_rows = []
+
+        for store in sorted_stores:
+            country = str(store.get("store_id") or "Unknown")
+            units_sold = max(float(store.get("total_quantity", 0) or 0), 0.0)
+            revenue = float(store.get("total_revenue", 0) or 0)
+            sale_lines = float(store.get("transaction_count", 0) or 0)
+
+            country_rows.append(
+                {
+                    "Country": country,
+                    "Units Sold": round(units_sold),
+                    "Revenue": format_currency(revenue),
+                    "Sale Lines": round(sale_lines),
+                }
+            )
+
+            coordinates = COUNTRY_MAP_CENTERS.get(country)
+            if coordinates:
+                map_rows.append(
+                    {
+                        "Country": country,
+                        "Units Sold": round(units_sold),
+                        "Revenue": format_currency(revenue),
+                        "Sale Lines": round(sale_lines),
+                        "Latitude": coordinates[0],
+                        "Longitude": coordinates[1],
+                    }
+                )
+
+        map_column, chart_column = st.columns([1.25, 1], gap="large")
+
+        with map_column:
+            st.markdown("#### Units sold across the world")
+            if map_rows:
+                map_data = pd.DataFrame(map_rows)
+                maximum_units = max(float(map_data["Units Sold"].max()), 1.0)
+                map_data["Marker Size"] = (
+                    18_000
+                    + (map_data["Units Sold"] / maximum_units) ** 0.5 * 105_000
+                )
+                st.map(
+                    map_data,
+                    latitude="Latitude",
+                    longitude="Longitude",
+                    size="Marker Size",
+                    color="#6366f1",
+                    height=540,
+                    alt="Country markets sized by total units sold",
+                )
+                unmapped = sorted(
+                    {
+                        row["Country"]
+                        for row in country_rows
+                        if row["Country"] not in COUNTRY_MAP_CENTERS
+                    }
+                )
+                if unmapped:
+                    st.caption(
+                        "Not shown as map points because the dataset does not identify "
+                        "a specific country: "
+                        + ", ".join(unmapped)
+                        + ". Their sales remain included in the chart and table."
+                    )
+                st.caption(
+                    "Larger markers mean more units sold. Hover over a marker for "
+                    "its unit, revenue, and sale-line totals. West Indies is plotted "
+                    "at an approximate regional center."
+                )
+            else:
+                st.info("No mappable country sales are available yet.")
+
+        with chart_column:
+            st.markdown("#### Top 15 countries by units sold")
+            chart_data = pd.DataFrame(country_rows).head(15)
+            if not chart_data.empty:
+                st.bar_chart(
+                    chart_data,
+                    x="Units Sold",
+                    y="Country",
+                    horizontal=True,
+                    sort="-Units Sold",
+                    height=540,
+                    alt="Top 15 country markets ranked by units sold",
+                )
+            else:
+                st.info("No country sales are available to compare.")
+
+        st.dataframe(
+            country_rows,
+            hide_index=True,
+            alt="Units, revenue, and sale lines for all country markets",
+        )
+    else:
+        st.info("No country analytics available.")
+
+    st.markdown("<div style='height: 12px'></div>", unsafe_allow_html=True)
+
+    if products:
         st.subheader("Product Performance")
 
         product_rows = []
-
         for product in products:
             product_rows.append(
                 {
                     "Product": product.get("product_id"),
                     "Description": product.get("description"),
-                    "Units Sold": round(
-                        float(product.get("total_quantity", 0))
-                    ),
-                    "Revenue": format_currency(
-                        product.get("total_revenue", 0)
-                    ),
-                    "Sale Lines": round(
-                        float(product.get("transaction_count", 0))
-                    ),
+                    "Units Sold": round(float(product.get("total_quantity", 0))),
+                    "Revenue": format_currency(product.get("total_revenue", 0)),
+                    "Sale Lines": round(float(product.get("transaction_count", 0))),
                 }
             )
 
         st.dataframe(
             product_rows,
             hide_index=True,
+            alt="Online Retail II product units, revenue, and sale-line totals",
         )
-
-        chart1, chart2 = st.columns(2, gap="large")
-
-        with chart1:
-            st.subheader("Revenue by Product")
-
-            revenue_chart_data = {
-                product["product_id"]: product["total_revenue"]
-                for product in products
-            }
-
-            st.bar_chart(revenue_chart_data)
-
-        with chart2:
-            st.subheader("Units Sold by Product")
-
-            quantity_chart_data = {
-                product["product_id"]: product["total_quantity"]
-                for product in products
-            }
-
-            st.bar_chart(quantity_chart_data)
-
     else:
         st.info("No product analytics available.")
 
-    st.markdown("<div style='height: 12px'></div>", unsafe_allow_html=True)
 
-    if stores:
-
-        st.subheader("Country Performance")
-
-        store_rows = []
-
-        for store in stores:
-            store_rows.append(
-                {
-                    "Country": store.get("store_id"),
-                    "Units Sold": round(
-                        float(store.get("total_quantity", 0))
-                    ),
-                    "Revenue": format_currency(
-                        store.get("total_revenue", 0)
-                    ),
-                    "Sale Lines": round(
-                        float(store.get("transaction_count", 0))
-                    ),
-                }
-            )
-
-        st.dataframe(
-            store_rows,
-            hide_index=True,
-        )
-
-    else:
-        st.info("No country analytics available.")
-
-
-# =========================================================
 # ANOMALIES
 # =========================================================
 
